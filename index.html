@@ -138,18 +138,43 @@
         </div>
 
         <!-- List View (Full Table with Inline Editing) -->
-        <div id="view-list" class="hidden space-y-4">
-            <div class="flex items-center justify-between px-1">
-                <h2 class="font-black text-slate-800 text-xl tracking-tight">支出一覧</h2>
-                <span class="text-xs text-slate-400 font-bold bg-slate-100 px-3 py-1 rounded-full italic">セルをタップして直接編集</span>
+        <div id="view-list" class="hidden space-y-8">
+            <div class="space-y-4">
+                <div class="flex items-center justify-between px-1">
+                    <h2 class="font-black text-slate-800 text-xl tracking-tight">支出明細一覧</h2>
+                    <span class="text-xs text-slate-400 font-bold bg-slate-100 px-3 py-1 rounded-full italic">セルをタップして直接編集</span>
+                </div>
+                <div class="bg-white rounded-3xl border border-slate-200 overflow-x-auto shadow-xl no-scrollbar">
+                    <table class="w-full text-sm min-w-[800px] border-collapse">
+                        <thead>
+                            <tr id="fullTableHeadRow" class="bg-slate-50 border-b border-slate-100"></tr>
+                        </thead>
+                        <tbody id="fullExpensesTable" class="divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
             </div>
-            <div class="bg-white rounded-3xl border border-slate-200 overflow-x-auto shadow-xl no-scrollbar">
-                <table class="w-full text-sm min-w-[800px] border-collapse">
-                    <thead>
-                        <tr id="fullTableHeadRow" class="bg-slate-50 border-b border-slate-100"></tr>
-                    </thead>
-                    <tbody id="fullExpensesTable" class="divide-y divide-slate-50"></tbody>
-                </table>
+
+            <!-- Individual Totals Section (Summary Table) -->
+            <div class="space-y-4">
+                <div class="flex items-center gap-2 px-1">
+                    <i data-lucide="bar-chart-3" class="text-indigo-600" size="20"></i>
+                    <h2 class="font-black text-slate-800 text-xl tracking-tight">メンバー別集計</h2>
+                </div>
+                <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-lg">
+                    <table class="w-full text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100">
+                                <th class="p-4 text-left font-black text-slate-400 text-[10px] uppercase tracking-widest">メンバー</th>
+                                <th class="p-4 text-right font-black text-slate-400 text-[10px] uppercase tracking-widest">支払済 (Paid)</th>
+                                <th class="p-4 text-right font-black text-slate-400 text-[10px] uppercase tracking-widest">負担分 (Should)</th>
+                                <th class="p-4 text-right font-black text-slate-400 text-[10px] uppercase tracking-widest">差額 (Balance)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberSummaryTable" class="divide-y divide-slate-50">
+                            <!-- JS injected content -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -265,18 +290,14 @@
                 const tr = document.createElement('tr');
                 tr.className = "group hover:bg-slate-50 transition-colors";
                 
-                // Item Name Cell
                 const tdTitle = createEditableTd(exp.title || '無題', (val) => updateExpData(exp.id, 'title', val), 'text');
-                // Payer Cell
                 const tdPayer = createSelectTd(exp.payerId, state.members, (val) => updateExpData(exp.id, 'payerId', val));
-                // Amount Cell
                 const tdAmount = createEditableTd(exp.amount, (val) => updateExpData(exp.id, 'amount', val), 'number', true);
                 
                 tr.appendChild(tdTitle);
                 tr.appendChild(tdPayer);
                 tr.appendChild(tdAmount);
 
-                // Weight Cells
                 state.members.forEach(m => {
                     const weight = exp.weights[m.id] || 0;
                     const tdWeight = createEditableTd(weight, (val) => {
@@ -288,16 +309,34 @@
                     tr.appendChild(tdWeight);
                 });
 
-                // Delete Action
                 const tdAction = document.createElement('td');
                 tdAction.className = "p-2 text-center";
                 tdAction.innerHTML = `<button onclick="deleteExpense('${exp.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i data-lucide="trash-2" size="14"></i></button>`;
                 tr.appendChild(tdAction);
-
                 tableBody.appendChild(tr);
             });
 
-            // Settlement result (Input tab only)
+            // Member Summary Table Rendering
+            const summaryBody = document.getElementById('memberSummaryTable');
+            summaryBody.innerHTML = '';
+            state.members.forEach(m => {
+                const b = calculation.balances[m.id] || { paid: 0, should: 0, diff: 0 };
+                const tr = document.createElement('tr');
+                tr.className = "font-bold text-slate-700";
+                
+                const balanceColor = b.diff > 0.1 ? 'text-indigo-600' : (b.diff < -0.1 ? 'text-rose-500' : 'text-slate-400');
+                const balanceIcon = b.diff > 0.1 ? '+' : '';
+
+                tr.innerHTML = `
+                    <td class="p-4 font-black text-slate-800">${escapeHtml(m.name)}</td>
+                    <td class="p-4 text-right">${formatCurrency(b.paid)}</td>
+                    <td class="p-4 text-right text-slate-400 font-medium">${formatCurrency(b.should)}</td>
+                    <td class="p-4 text-right font-black italic text-lg ${balanceColor}">${balanceIcon}${formatCurrency(b.diff)}</td>
+                `;
+                summaryBody.appendChild(tr);
+            });
+
+            // Settlement plan (Dashboard)
             const planContainer = document.getElementById('settlementPlan');
             planContainer.innerHTML = '';
             if (calculation.plan.length === 0) {
@@ -385,31 +424,62 @@
 
         // --- Core Logic ---
         function calculate() {
-            const balances = {}; state.members.forEach(m => balances[m.id] = 0);
+            const balances = {}; 
+            state.members.forEach(m => {
+                balances[m.id] = { paid: 0, should: 0, diff: 0 };
+            });
+
             let total = 0;
             state.expenses.forEach(exp => {
-                const amt = parseFloat(exp.amount) || 0; total += amt;
-                if (balances[exp.payerId] !== undefined) balances[exp.payerId] += amt;
-                let totalWeight = 0; state.members.forEach(m => totalWeight += (parseFloat(exp.weights[m.id]) || 0));
+                const amt = parseFloat(exp.amount) || 0; 
+                total += amt;
+
+                // 支払記録
+                if (balances[exp.payerId]) {
+                    balances[exp.payerId].paid += amt;
+                }
+
+                // 負担分計算
+                let totalWeight = 0; 
+                state.members.forEach(m => totalWeight += (parseFloat(exp.weights[m.id]) || 0));
+                
                 if (totalWeight > 0) {
                     const perWeight = amt / totalWeight;
-                    state.members.forEach(m => balances[m.id] -= (parseFloat(exp.weights[m.id]) || 0) * perWeight);
+                    state.members.forEach(m => {
+                        const mWeight = parseFloat(exp.weights[m.id]) || 0;
+                        balances[m.id].should += mWeight * perWeight;
+                    });
                 }
             });
-            const d = [], c = [];
-            Object.entries(balances).forEach(([id, amt]) => {
-                const name = state.members.find(m => m.id === id)?.name || '不明';
-                if (amt < -0.1) d.push({ id, amt, name }); else if (amt > 0.1) c.push({ id, amt, name });
+
+            // 差額計算
+            Object.keys(balances).forEach(id => {
+                balances[id].diff = balances[id].paid - balances[id].should;
             });
-            const plan = []; let i=0, j=0;
-            const dCopy = JSON.parse(JSON.stringify(d)); const cCopy = JSON.parse(JSON.stringify(c));
+
+            // 精算プラン作成
+            const d = [], c = [];
+            Object.entries(balances).forEach(([id, b]) => {
+                const name = state.members.find(m => m.id === id)?.name || '不明';
+                if (b.diff < -0.1) d.push({ id, amt: b.diff, name }); 
+                else if (b.diff > 0.1) c.push({ id, amt: b.diff, name });
+            });
+
+            const plan = []; 
+            let i=0, j=0;
+            const dCopy = JSON.parse(JSON.stringify(d)); 
+            const cCopy = JSON.parse(JSON.stringify(c));
+
             while(i < dCopy.length && j < cCopy.length) {
                 const s = Math.min(Math.abs(dCopy[i].amt), cCopy[j].amt);
                 if(s > 0.1) plan.push({ fromName: dCopy[i].name, toName: cCopy[j].name, amount: s });
-                dCopy[i].amt += s; cCopy[j].amt -= s;
-                if(Math.abs(dCopy[i].amt) < 0.1) i++; if(cCopy[j].amt < 0.1) j++;
+                dCopy[i].amt += s; 
+                cCopy[j].amt -= s;
+                if(Math.abs(dCopy[i].amt) < 0.1) i++; 
+                if(cCopy[j].amt < 0.1) j++;
             }
-            return { total, plan };
+
+            return { total, plan, balances };
         }
 
         function updateExpData(id, k, v) { 
@@ -428,7 +498,7 @@
             state.expenses.unshift({ id, title: '', amount: 0, payerId: state.members[0].id, weights });
             render();
             if (document.getElementById('view-input').classList.contains('hidden')) {
-                // List View: Scroll to top of table
+                // Stay in list view
             } else {
                 openExpenseModal(id);
             }
@@ -476,7 +546,7 @@
 
         function closeMemberModal() { const m = document.getElementById('memberModal'); m.querySelector('.bottom-sheet').classList.remove('active'); setTimeout(() => m.classList.add('hidden'), 300); }
 
-        // --- Details Modal (Fallback) ---
+        // --- Details Modal ---
         function openExpenseModal(id) {
             const exp = state.expenses.find(e => e.id === id); if (!exp) return;
             const content = document.getElementById('modalContent');
