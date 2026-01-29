@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>わりかん君 Cloud</title>
+    <title>優秀わりかん君</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.css">
     <style>
@@ -12,7 +12,7 @@
         body {
             font-family: 'Noto Sans JP', sans-serif;
             -webkit-tap-highlight-color: transparent;
-            overscroll-behavior-y: none; /* スマホの引っ張り更新防止 */
+            overscroll-behavior-y: none;
         }
 
         .bottom-sheet {
@@ -34,7 +34,6 @@
             margin: 0;
         }
 
-        /* タップ領域の確保 */
         button, select, input {
             min-height: 44px;
         }
@@ -87,7 +86,12 @@
                 <div class="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col justify-center">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">メンバー</p>
                     <div class="flex items-center justify-between">
-                        <span id="memberCount" class="text-xl font-black text-slate-800">1人</span>
+                        <div class="flex items-baseline gap-1">
+                            <span id="memberCount" class="text-xl font-black text-slate-800">0人</span>
+                            <button onclick="openMemberManager()" class="text-indigo-400 hover:text-indigo-600 p-1">
+                                <i data-lucide="settings" size="14"></i>
+                            </button>
+                        </div>
                         <button onclick="addMember(event)" class="w-10 h-10 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 active:scale-90 transition-transform shadow-sm">
                             <i data-lucide="user-plus" size="20"></i>
                         </button>
@@ -119,7 +123,6 @@
                     </tbody>
                 </table>
             </div>
-            <p class="text-center text-[10px] text-slate-400">横にスクロールして比率を調整できます</p>
         </div>
 
         <!-- Results Section -->
@@ -146,11 +149,11 @@
     </main>
 
     <!-- Floating Add Button -->
-    <button onclick="createNewExpense(event)" class="fixed bottom-8 right-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl shadow-indigo-400 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]">
+    <button id="floatingAddBtn" onclick="createNewExpense(event)" class="fixed bottom-8 right-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl shadow-indigo-400 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]">
         <i data-lucide="plus" size="32"></i>
     </button>
 
-    <!-- Bottom Sheet (Expense Editor) -->
+    <!-- Expense Modal -->
     <div id="expenseModal" class="fixed inset-0 z-[100] hidden">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeExpenseModal()"></div>
         <div class="bottom-sheet fixed inset-x-0 bottom-0 w-full max-w-lg mx-auto bg-white rounded-t-[2.5rem] shadow-2xl p-6 max-h-[92vh] overflow-y-auto no-scrollbar">
@@ -161,61 +164,65 @@
                     <i data-lucide="x" size="20"></i>
                 </button>
             </div>
-            <div id="modalContent" class="space-y-6 pb-20">
-                <!-- Dynamic Content -->
+            <div id="modalContent" class="space-y-6 pb-20"></div>
+        </div>
+    </div>
+
+    <!-- Member Manager Modal -->
+    <div id="memberModal" class="fixed inset-0 z-[110] hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeMemberModal()"></div>
+        <div class="bottom-sheet fixed inset-x-0 bottom-0 w-full max-w-lg mx-auto bg-white rounded-t-[2.5rem] shadow-2xl p-6 max-h-[80vh] overflow-y-auto">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-black text-slate-800">メンバー管理</h3>
+                <button onclick="closeMemberModal()" class="p-2 bg-slate-100 rounded-full text-slate-600">
+                    <i data-lucide="x" size="20"></i>
+                </button>
             </div>
+            <div id="memberListContent" class="space-y-4 pb-10"></div>
+            <button onclick="addMember(event)" class="w-full bg-indigo-50 text-indigo-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 mb-6">
+                <i data-lucide="user-plus" size="20"></i> メンバーを追加
+            </button>
         </div>
     </div>
 
     <!-- Config Modal -->
-    <div id="configModal" class="fixed inset-0 z-[110] hidden flex items-center justify-center p-4">
+    <div id="configModal" class="fixed inset-0 z-[120] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onclick="toggleConfig()"></div>
         <div class="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl p-8">
             <h2 class="text-2xl font-black text-slate-800 mb-2">同期設定</h2>
-            <p class="text-sm text-slate-500 mb-6 font-medium">GASのURLを入力すると、複数デバイスで同期されます。</p>
-            <input id="gasUrlInput" type="url" placeholder="https://script.google.com/..."
-                class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-4 text-sm font-bold outline-none focus:border-indigo-500 transition-all mb-6">
-            <button onclick="saveConfig()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-indigo-100 active:scale-95 transition-all">
-                設定を保存
-            </button>
+            <input id="gasUrlInput" type="url" placeholder="GAS URL" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-4 text-sm font-bold outline-none mb-6">
+            <button onclick="saveConfig()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black">設定を保存</button>
         </div>
     </div>
 
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
-        // --- Core State ---
         let state = {
             projectId: '',
             title: '新しい旅行',
-            members: [{ id: 'm_1', name: '自分' }],
+            members: [], // デフォルト0人
             expenses: []
         };
         
         let gasUrl = localStorage.getItem('fair_share_gas_url_v3') || '';
         let editingExpenseId = null;
 
-        // --- Initialization ---
         window.onload = () => {
             const urlParams = new URLSearchParams(window.location.search);
-            let pid = urlParams.get('pid');
+            let pid = urlParams.get('pid') || 'p_' + Math.random().toString(36).substr(2, 9);
             
-            if (!pid) {
-                pid = 'p_' + Math.random().toString(36).substr(2, 9);
-                try {
-                    const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?pid=' + pid;
-                    window.history.replaceState({ path: newUrl }, '', newUrl);
-                } catch(e) {}
+            if (!urlParams.get('pid')) {
+                const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?pid=' + pid;
+                window.history.replaceState({ path: newUrl }, '', newUrl);
             }
             
             state.projectId = pid;
             document.getElementById('projectIdDisplay').innerText = `ID: ${pid}`;
-            document.getElementById('gasUrlInput').value = gasUrl;
-
+            
             const cached = localStorage.getItem('fs_cache_' + pid);
             if (cached) {
-                try {
-                    state = JSON.parse(cached);
-                } catch(e) { console.error("Cache load error", e); }
+                try { state = JSON.parse(cached); } catch(e) {}
             }
 
             render();
@@ -227,37 +234,31 @@
             });
         };
 
-        // --- Logic & Rendering ---
         function render() {
             const calculation = calculate();
-
-            document.getElementById('projectTitle').value = state.title;
             document.getElementById('totalAmount').innerText = formatCurrency(calculation.total);
             document.getElementById('memberCount').innerText = `${state.members.length}人`;
 
-            // Expenses List
-            const listContainer = document.getElementById('recentExpensesList');
-            const tableBody = document.getElementById('fullExpensesTable');
-            const headRow = document.getElementById('fullTableHeadRow');
-
-            // Table Header
-            if (headRow) {
-                headRow.innerHTML = `
-                    <th class="p-4 text-left font-bold text-slate-400 text-[10px] uppercase min-w-[120px]">項目</th>
-                    <th class="p-4 text-right font-bold text-slate-400 text-[10px] uppercase min-w-[100px]">金額</th>
-                    ${state.members.map(m => `
-                        <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase border-l border-slate-100 min-w-[90px] truncate">
-                            ${escapeHtml(m.name)}
-                        </th>
-                    `).join('')}
-                    <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase">詳細</th>
-                `;
+            // 空の状態のボタン制御
+            const addBtn = document.getElementById('floatingAddBtn');
+            if (state.members.length === 0) {
+                addBtn.classList.add('opacity-50');
+            } else {
+                addBtn.classList.remove('opacity-50');
             }
 
+            // Dashboard
+            const listContainer = document.getElementById('recentExpensesList');
             listContainer.innerHTML = '';
-            tableBody.innerHTML = '';
-
-            if (state.expenses.length === 0) {
+            
+            if (state.members.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="bg-white rounded-3xl p-10 border-2 border-dashed border-slate-200 text-center">
+                        <i data-lucide="users" class="mx-auto text-indigo-300 mb-2" size="32"></i>
+                        <p class="text-sm text-slate-400 font-bold mb-4">まずはメンバーを追加してください</p>
+                        <button onclick="addMember(event)" class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-sm">メンバーを追加</button>
+                    </div>`;
+            } else if (state.expenses.length === 0) {
                 listContainer.innerHTML = `
                     <div class="bg-white rounded-3xl p-10 border-2 border-dashed border-slate-200 text-center">
                         <i data-lucide="receipt" class="mx-auto text-slate-300 mb-2" size="32"></i>
@@ -266,12 +267,10 @@
             }
 
             state.expenses.forEach(exp => {
-                const payer = state.members.find(m => m.id === exp.payerId)?.name || '削除済み';
-                
-                // Dashboard Card
+                const payer = state.members.find(m => m.id === exp.payerId)?.name || '不明';
                 const card = document.createElement('button');
                 card.className = "w-full bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between hover:border-indigo-200 transition-all text-left shadow-sm active:scale-[0.98]";
-                card.onclick = (e) => { e.preventDefault(); openExpenseModal(exp.id); };
+                card.onclick = () => openExpenseModal(exp.id);
                 card.innerHTML = `
                     <div class="overflow-hidden pr-2">
                         <div class="font-bold text-slate-800 truncate">${escapeHtml(exp.title || '無題')}</div>
@@ -285,79 +284,56 @@
                         <i data-lucide="chevron-right" size="18" class="text-slate-300"></i>
                     </div>`;
                 listContainer.appendChild(card);
+            });
 
-                // Full Table Row
+            // Table
+            const tableBody = document.getElementById('fullExpensesTable');
+            const headRow = document.getElementById('fullTableHeadRow');
+            headRow.innerHTML = `
+                <th class="p-4 text-left font-bold text-slate-400 text-[10px] uppercase min-w-[120px]">項目</th>
+                <th class="p-4 text-right font-bold text-slate-400 text-[10px] uppercase min-w-[100px]">金額</th>
+                ${state.members.map(m => `<th class="p-4 text-center font-bold text-slate-400 text-[10px] border-l border-slate-100 min-w-[90px] truncate">${escapeHtml(m.name)}</th>`).join('')}
+                <th class="p-4 text-center font-bold text-slate-400 text-[10px]">詳細</th>
+            `;
+            tableBody.innerHTML = '';
+            state.expenses.forEach(exp => {
                 const row = document.createElement('tr');
-                row.className = "active:bg-slate-50 transition-colors";
+                row.className = "active:bg-slate-50";
                 row.onclick = () => openExpenseModal(exp.id);
-                
-                const weightsHtml = state.members.map(m => {
-                    const w = exp.weights[m.id] !== undefined ? exp.weights[m.id] : 0;
-                    return `
-                        <td class="p-2 text-center border-l border-slate-50 min-w-[90px]">
-                            <div class="flex items-center justify-center gap-1" onclick="event.stopPropagation()">
-                                <button onclick="toggleParticipation('${exp.id}', '${m.id}')" 
-                                    class="w-8 h-8 rounded-lg font-black text-[10px] border ${w > 0 ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-300 border-slate-200'}">
-                                    ${w > 0 ? 'ON' : 'OFF'}
-                                </button>
-                                <input type="number" step="0.1" value="${Number(w).toFixed(1)}" 
-                                    onchange="updateWeightDirect('${exp.id}', '${m.id}', this.value)"
-                                    class="w-12 h-8 bg-slate-50 border border-slate-100 rounded-lg text-center text-xs font-bold outline-none focus:border-indigo-300">
-                            </div>
-                        </td>
-                    `;
-                }).join('');
-
                 row.innerHTML = `
-                    <td class="p-4">
-                        <div class="font-bold text-slate-700 truncate max-w-[120px]">${escapeHtml(exp.title || '無題')}</div>
-                        <div class="text-[10px] font-bold text-slate-400">${escapeHtml(payer)}</div>
-                    </td>
+                    <td class="p-4"><div class="font-bold text-slate-700 truncate">${escapeHtml(exp.title || '無題')}</div></td>
                     <td class="p-4 text-right font-black text-slate-800">${formatCurrency(exp.amount)}</td>
-                    ${weightsHtml}
-                    <td class="p-4 text-center text-indigo-500"><i data-lucide="settings" size="16"></i></td>
+                    ${state.members.map(m => {
+                        const w = exp.weights[m.id] || 0;
+                        return `<td class="p-2 text-center border-l border-slate-50"><div class="font-bold text-xs ${w > 0 ? 'text-indigo-600' : 'text-slate-300'}">${w > 0 ? w : '-'}</div></td>`;
+                    }).join('')}
+                    <td class="p-4 text-center text-indigo-500"><i data-lucide="chevron-right" size="16"></i></td>
                 `;
                 tableBody.appendChild(row);
             });
 
-            // Settlement Plan
+            // Plan & Balances
             const planContainer = document.getElementById('settlementPlan');
-            if (calculation.plan.length === 0) {
-                planContainer.innerHTML = '貸し借りは現在ありません';
-            } else {
-                planContainer.innerHTML = '';
-                calculation.plan.forEach(p => {
-                    const div = document.createElement('div');
-                    div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-sm";
-                    div.innerHTML = `
-                        <div class="flex flex-col min-w-[80px]">
-                            <span class="text-[9px] font-bold text-rose-400 uppercase text-left tracking-tighter">支払う人</span>
-                            <span class="font-bold text-slate-700 truncate text-left">${escapeHtml(p.fromName)}</span>
-                        </div>
-                        <i data-lucide="arrow-right" class="text-slate-300 mx-2" size="14"></i>
-                        <div class="flex flex-col min-w-[80px]">
-                            <span class="text-[9px] font-bold text-emerald-400 uppercase text-right tracking-tighter">受取る人</span>
-                            <span class="font-bold text-slate-700 truncate text-right">${escapeHtml(p.toName)}</span>
-                        </div>
-                        <div class="ml-4 pl-4 border-l border-slate-200 text-lg font-black text-slate-800 shrink-0 italic">
-                            ${formatCurrency(p.amount)}
-                        </div>`;
-                    planContainer.appendChild(div);
-                });
-            }
+            planContainer.innerHTML = calculation.plan.length === 0 ? '貸し借りは現在ありません' : '';
+            calculation.plan.forEach(p => {
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100";
+                div.innerHTML = `<div class="text-left"><span class="text-[9px] block text-rose-400 font-bold uppercase">支払う</span><span class="font-bold">${escapeHtml(p.fromName)}</span></div>
+                                 <i data-lucide="arrow-right" class="text-slate-300"></i>
+                                 <div class="text-right"><span class="text-[9px] block text-emerald-400 font-bold uppercase">受取る</span><span class="font-bold">${escapeHtml(p.toName)}</span></div>
+                                 <div class="ml-4 font-black italic text-lg">${formatCurrency(p.amount)}</div>`;
+                planContainer.appendChild(div);
+            });
 
-            // Balances
             const balContainer = document.getElementById('memberBalances');
             balContainer.innerHTML = '';
             state.members.forEach(m => {
                 const b = calculation.balances[m.id] || 0;
                 const div = document.createElement('div');
                 div.className = "flex items-center justify-between py-3 border-b border-slate-50 last:border-0";
-                div.innerHTML = `
-                    <span class="font-bold text-slate-600">${escapeHtml(m.name)}</span>
-                    <span class="font-black italic ${b > 0.1 ? 'text-emerald-500' : b < -0.1 ? 'text-rose-400' : 'text-slate-300'}">
-                        ${b > 0.1 ? '+' : ''}${formatCurrency(b)}
-                    </span>`;
+                div.innerHTML = `<span class="font-bold text-slate-600">${escapeHtml(m.name)}</span>
+                                 <span class="font-black italic ${b > 0.1 ? 'text-emerald-500' : b < -0.1 ? 'text-rose-400' : 'text-slate-300'}">
+                                 ${b > 0.1 ? '+' : ''}${formatCurrency(b)}</span>`;
                 balContainer.appendChild(div);
             });
 
@@ -369,87 +345,111 @@
             const balances = {};
             state.members.forEach(m => balances[m.id] = 0);
             let total = 0;
-
             state.expenses.forEach(exp => {
                 const amt = parseFloat(exp.amount) || 0;
                 total += amt;
                 if (balances[exp.payerId] !== undefined) balances[exp.payerId] += amt;
-
                 let totalWeight = 0;
-                state.members.forEach(m => {
-                    const w = parseFloat(exp.weights[m.id]) || 0;
-                    totalWeight += w;
-                });
-
+                state.members.forEach(m => totalWeight += (parseFloat(exp.weights[m.id]) || 0));
                 if (totalWeight > 0) {
                     const perWeight = amt / totalWeight;
-                    state.members.forEach(m => {
-                        const w = parseFloat(exp.weights[m.id]) || 0;
-                        balances[m.id] -= w * perWeight;
-                    });
+                    state.members.forEach(m => balances[m.id] -= (parseFloat(exp.weights[m.id]) || 0) * perWeight);
                 }
             });
-
-            const debtors = [], creditors = [];
+            const d = [], c = [];
             Object.entries(balances).forEach(([id, amt]) => {
                 const name = state.members.find(m => m.id === id)?.name || '不明';
-                if (amt < -0.1) debtors.push({ id, amt, name });
-                else if (amt > 0.1) creditors.push({ id, amt, name });
+                if (amt < -0.1) d.push({ id, amt, name }); else if (amt > 0.1) c.push({ id, amt, name });
             });
-
-            debtors.sort((a, b) => a.amt - b.amt);
-            creditors.sort((a, b) => b.amt - a.amt);
-
+            d.sort((a,b)=>a.amt-b.amt); c.sort((a,b)=>b.amt-a.amt);
             const plan = [];
-            const d = JSON.parse(JSON.stringify(debtors));
-            const c = JSON.parse(JSON.stringify(creditors));
-            let i = 0, j = 0;
-
-            while (i < d.length && j < c.length) {
-                const settle = Math.min(Math.abs(d[i].amt), c[j].amt);
-                if (settle > 0.1) {
-                    plan.push({ fromName: d[i].name, toName: c[j].name, amount: settle });
-                }
-                d[i].amt += settle;
-                c[j].amt -= settle;
-                if (Math.abs(d[i].amt) < 0.1) i++;
-                if (c[j].amt < 0.1) j++;
+            let i=0, j=0;
+            while(i<d.length && j<c.length) {
+                const s = Math.min(Math.abs(d[i].amt), c[j].amt);
+                if(s>0.1) plan.push({ fromName: d[i].name, toName: c[j].name, amount: s });
+                d[i].amt += s; c[j].amt -= s;
+                if(Math.abs(d[i].amt)<0.1) i++; if(c[j].amt<0.1) j++;
             }
-
             return { total, balances, plan };
         }
 
-        // --- Actions ---
+        // --- Member Logic ---
         function addMember(e) {
             if (e) e.preventDefault();
             const name = prompt('追加するメンバーの名前：');
             if (!name || name.trim() === "") return;
-            
             const id = 'm_' + Math.random().toString(36).substr(2, 5);
             state.members.push({ id, name: name.trim() });
-            
-            state.expenses.forEach(exp => {
-                if (exp.weights[id] === undefined) exp.weights[id] = 1;
-            });
-            
+            state.expenses.forEach(exp => { if (exp.weights[id] === undefined) exp.weights[id] = 1; });
             render();
-            triggerAutoSave();
+            if (document.getElementById('memberModal').classList.contains('hidden')) {
+                triggerAutoSave();
+            } else {
+                openMemberManager(); // モーダル内なら再描画
+            }
         }
 
+        function renameMember(id) {
+            const m = state.members.find(m => m.id === id);
+            if (!m) return;
+            const newName = prompt('新しい名前：', m.name);
+            if (newName && newName.trim()) {
+                m.name = newName.trim();
+                render();
+                openMemberManager();
+                triggerAutoSave();
+            }
+        }
+
+        function deleteMember(id) {
+            const m = state.members.find(m => m.id === id);
+            if (!m) return;
+            if (confirm(`「${m.name}」を削除しますか？\n関連する支出の記録には「不明」として残ります。`)) {
+                state.members = state.members.filter(m => m.id !== id);
+                // 支出データ内の重みも整理
+                state.expenses.forEach(exp => { delete exp.weights[id]; });
+                render();
+                openMemberManager();
+                triggerAutoSave();
+            }
+        }
+
+        function openMemberManager() {
+            const content = document.getElementById('memberListContent');
+            content.innerHTML = state.members.map(m => `
+                <div class="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span class="font-bold text-slate-800">${escapeHtml(m.name)}</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="renameMember('${m.id}')" class="p-2 text-slate-400 hover:text-indigo-600 bg-white rounded-lg shadow-sm border border-slate-100"><i data-lucide="edit-3" size="16"></i></button>
+                        <button onclick="deleteMember('${m.id}')" class="p-2 text-slate-400 hover:text-rose-500 bg-white rounded-lg shadow-sm border border-slate-100"><i data-lucide="trash-2" size="16"></i></button>
+                    </div>
+                </div>
+            `).join('');
+            if (state.members.length === 0) {
+                content.innerHTML = '<p class="text-center py-6 text-slate-400 text-sm font-medium italic">登録されているメンバーはいません</p>';
+            }
+            const modal = document.getElementById('memberModal');
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => modal.querySelector('.bottom-sheet').classList.add('active'));
+            lucide.createIcons();
+        }
+
+        function closeMemberModal() {
+            const modal = document.getElementById('memberModal');
+            modal.querySelector('.bottom-sheet').classList.remove('active');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        // --- Expense Logic ---
         function createNewExpense(e) {
-            if (e) e.preventDefault();
+            if (state.members.length === 0) {
+                addMember(e);
+                return;
+            }
             const id = 'e_' + Math.random().toString(36).substr(2, 9);
             const weights = {};
             state.members.forEach(m => weights[m.id] = 1);
-            
-            const newExp = {
-                id,
-                title: '',
-                amount: 0,
-                payerId: state.members[0].id,
-                weights
-            };
-            state.expenses.unshift(newExp);
+            state.expenses.unshift({ id, title: '', amount: 0, payerId: state.members[0].id, weights });
             render();
             openExpenseModal(id);
         }
@@ -458,26 +458,7 @@
             editingExpenseId = id;
             const exp = state.expenses.find(e => e.id === id);
             if (!exp) return;
-            
             const content = document.getElementById('modalContent');
-            
-            let membersHtml = '';
-            state.members.forEach(m => {
-                const w = exp.weights[m.id] !== undefined ? exp.weights[m.id] : 0;
-                membersHtml += `
-                    <div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                        <span class="font-bold text-slate-700 truncate max-w-[120px]">${escapeHtml(m.name)}</span>
-                        <div class="flex items-center gap-2">
-                            <button onclick="updateWeight('${id}', '${m.id}', -0.1)" class="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm border border-slate-100"><i data-lucide="minus" size="14"></i></button>
-                            <span class="w-8 text-center font-black text-indigo-600">${Number(w).toFixed(1)}</span>
-                            <button onclick="updateWeight('${id}', '${m.id}', 0.1)" class="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm border border-slate-100"><i data-lucide="plus" size="14"></i></button>
-                            <button onclick="toggleParticipation('${id}', '${m.id}')" class="ml-1 px-3 h-10 rounded-xl text-[10px] font-black tracking-tighter ${w > 0 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}">
-                                ${w > 0 ? '参加' : '除外'}
-                            </button>
-                        </div>
-                    </div>`;
-            });
-
             content.innerHTML = `
                 <div class="space-y-4">
                     <div>
@@ -491,188 +472,120 @@
                         </div>
                         <div>
                             <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">支払った人</label>
-                            <select onchange="updateExpData('${id}', 'payerId', this.value)" class="w-full bg-slate-50 rounded-xl px-2 font-bold outline-none border-none h-14">
+                            <select onchange="updateExpData('${id}', 'payerId', this.value)" class="w-full bg-slate-50 rounded-xl px-2 font-bold outline-none h-14">
                                 ${state.members.map(m => `<option value="${m.id}" ${m.id === exp.payerId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+                                ${!state.members.some(m => m.id === exp.payerId) ? '<option selected>不明</option>' : ''}
                             </select>
                         </div>
                     </div>
                 </div>
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">負担比率 (1人あたり)</label>
-                    <div class="space-y-3">${membersHtml}</div>
+                    <div class="space-y-3">${state.members.map(m => `
+                        <div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                            <span class="font-bold text-slate-700 truncate max-w-[120px]">${escapeHtml(m.name)}</span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="updateWeight('${id}', '${m.id}', -0.1)" class="w-10 h-10 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center"><i data-lucide="minus" size="14"></i></button>
+                                <span class="w-8 text-center font-black text-indigo-600">${Number(exp.weights[m.id]||0).toFixed(1)}</span>
+                                <button onclick="updateWeight('${id}', '${m.id}', 0.1)" class="w-10 h-10 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center"><i data-lucide="plus" size="14"></i></button>
+                                <button onclick="toggleParticipation('${id}', '${m.id}')" class="ml-1 px-3 h-10 rounded-xl text-[10px] font-black ${(exp.weights[m.id]||0)>0?'bg-indigo-600 text-white':'bg-slate-200 text-slate-500'}">
+                                    ${(exp.weights[m.id]||0)>0?'参加':'除外'}
+                                </button>
+                            </div>
+                        </div>`).join('')}</div>
                 </div>
                 <div class="pt-4 border-t border-slate-100">
-                    <button onclick="deleteExpense('${id}')" class="w-full h-14 text-rose-500 font-black flex items-center justify-center gap-2 border-2 border-rose-50 rounded-2xl active:bg-rose-50 transition-colors">
+                    <button onclick="deleteExpense('${id}')" class="w-full h-14 text-rose-500 font-black flex items-center justify-center gap-2 border-2 border-rose-50 rounded-2xl">
                         <i data-lucide="trash-2" size="18"></i> 削除する
                     </button>
                 </div>`;
-
             const modal = document.getElementById('expenseModal');
             modal.classList.remove('hidden');
-            // スマホブラウザでの描画待機
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    modal.querySelector('.bottom-sheet').classList.add('active');
-                });
-            });
+            requestAnimationFrame(() => modal.querySelector('.bottom-sheet').classList.add('active'));
             lucide.createIcons();
         }
 
         function closeExpenseModal() {
-            const sheet = document.querySelector('.bottom-sheet');
-            sheet.classList.remove('active');
-            setTimeout(() => {
-                document.getElementById('expenseModal').classList.add('hidden');
-                editingExpenseId = null;
-                triggerAutoSave();
-            }, 300);
+            const modal = document.getElementById('expenseModal');
+            modal.querySelector('.bottom-sheet').classList.remove('active');
+            setTimeout(() => { modal.classList.add('hidden'); editingExpenseId = null; triggerAutoSave(); }, 300);
         }
 
-        function updateExpData(id, key, val) {
+        function updateExpData(id, k, v) {
             const exp = state.expenses.find(e => e.id === id);
+            if (exp) { exp[k] = k === 'amount' ? parseFloat(v) || 0 : v; render(); }
+        }
+
+        function updateWeight(eid, mid, d) {
+            const exp = state.expenses.find(e => e.id === eid);
             if (exp) {
-                exp[key] = key === 'amount' ? parseFloat(val) || 0 : val;
-                render();
+                const c = parseFloat(exp.weights[mid]) || 0;
+                exp.weights[mid] = Math.max(0, Math.round((c+d)*10)/10);
+                openExpenseModal(eid); render();
             }
         }
 
-        function updateWeight(expId, memId, diff) {
-            const exp = state.expenses.find(e => e.id === expId);
+        function toggleParticipation(eid, mid) {
+            const exp = state.expenses.find(e => e.id === eid);
             if (exp) {
-                const current = parseFloat(exp.weights[memId]) || 0;
-                exp.weights[memId] = Math.max(0, Math.round((current + diff) * 10) / 10);
-                openExpenseModal(expId); 
-                render();
-            }
-        }
-
-        function updateWeightDirect(expId, memId, val) {
-            const exp = state.expenses.find(e => e.id === expId);
-            if (exp) {
-                const n = parseFloat(val);
-                exp.weights[memId] = isNaN(n) ? 0 : Math.max(0, n);
-                render();
-                triggerAutoSave();
-            }
-        }
-
-        function toggleParticipation(expId, memId) {
-            const exp = state.expenses.find(e => e.id === expId);
-            if (exp) {
-                const current = parseFloat(exp.weights[memId]) || 0;
-                exp.weights[memId] = current > 0 ? 0 : 1;
-                if (editingExpenseId === expId) openExpenseModal(expId);
-                render();
+                exp.weights[mid] = (exp.weights[mid]||0) > 0 ? 0 : 1;
+                openExpenseModal(eid); render();
             }
         }
 
         function deleteExpense(id) {
             if (confirm('この支出を削除しますか？')) {
                 state.expenses = state.expenses.filter(e => e.id !== id);
-                closeExpenseModal();
-                render();
+                closeExpenseModal(); render();
             }
         }
 
-        // --- Utilities ---
-        function formatCurrency(n) {
-            return '¥' + Math.round(n).toLocaleString();
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>"']/g, function(m) {
-                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
-            });
-        }
-
-        function switchTab(tab) {
-            document.getElementById('view-input').classList.toggle('hidden', tab !== 'input');
-            document.getElementById('view-list').classList.toggle('hidden', tab !== 'list');
-            
-            const btnIn = document.getElementById('tab-input');
-            const btnLi = document.getElementById('tab-list');
-            
-            const activeClass = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-200";
-            const inactiveClass = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50";
-            
-            btnIn.className = tab === 'input' ? activeClass : inactiveClass;
-            btnLi.className = tab === 'list' ? activeClass : inactiveClass;
-            
+        // --- System Utilities ---
+        function formatCurrency(n) { return '¥' + Math.round(n).toLocaleString(); }
+        function escapeHtml(s) { return s ? s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) : ''; }
+        function switchTab(t) {
+            document.getElementById('view-input').classList.toggle('hidden', t !== 'input');
+            document.getElementById('view-list').classList.toggle('hidden', t !== 'list');
+            const bI = document.getElementById('tab-input'), bL = document.getElementById('tab-list');
+            const aC = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-200";
+            const iC = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50";
+            bI.className = t === 'input' ? aC : iC; bL.className = t === 'list' ? aC : iC;
             lucide.createIcons();
         }
-
-        function toggleConfig() {
-            document.getElementById('configModal').classList.toggle('hidden');
-        }
-
+        function toggleConfig() { document.getElementById('configModal').classList.toggle('hidden'); }
         function saveConfig() {
             gasUrl = document.getElementById('gasUrlInput').value;
             localStorage.setItem('fair_share_gas_url_v3', gasUrl);
-            toggleConfig();
-            if (gasUrl) fetchData();
+            toggleConfig(); if (gasUrl) fetchData();
         }
-
         function copyShareUrl() {
-            const url = window.location.href;
-            const tempInput = document.createElement("input");
-            document.body.appendChild(tempInput);
-            tempInput.value = url;
-            tempInput.select();
-            document.execCommand("copy");
-            document.body.removeChild(tempInput);
-            alert("共有URLをコピーしました！");
+            const t = document.createElement("input"); document.body.appendChild(t);
+            t.value = window.location.href; t.select(); document.execCommand("copy");
+            document.body.removeChild(t); alert("共有URLをコピーしました！");
         }
-
         let autoSaveTimer = null;
         function triggerAutoSave() {
             if (autoSaveTimer) clearTimeout(autoSaveTimer);
             autoSaveTimer = setTimeout(() => saveToCloud(), 2000);
         }
-
         async function fetchData() {
-            if (!gasUrl) return;
-            setSyncing(true);
+            if (!gasUrl) return; setSyncing(true);
             try {
-                const res = await fetch(`${gasUrl}?action=get&projectId=${state.projectId}`);
-                const result = await res.json();
-                if (result.ok && result.data) {
-                    state = result.data;
-                    render();
-                }
-            } catch (e) { console.error(e); }
-            setSyncing(false);
+                const r = await fetch(`${gasUrl}?action=get&projectId=${state.projectId}`);
+                const j = await r.json(); if (j.ok && j.data) { state = j.data; render(); }
+            } catch(e) {} setSyncing(false);
         }
-
         async function saveToCloud() {
-            if (!gasUrl) return;
-            setSyncing(true);
+            if (!gasUrl) return; setSyncing(true);
             try {
-                await fetch(gasUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({
-                        action: 'save',
-                        projectId: state.projectId,
-                        payload: state,
-                        projectName: state.title
-                    })
-                });
-            } catch (e) { console.error(e); }
-            setSyncing(false);
+                await fetch(gasUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'save', projectId: state.projectId, payload: state, projectName: state.title }) });
+            } catch(e) {} setSyncing(false);
         }
-
-        function setSyncing(isSync) {
-            const btn = document.getElementById('syncBtn');
-            if (!btn) return;
-            const icon = btn.querySelector('i');
-            if (isSync) {
-                icon.classList.add('animate-spin');
-                btn.classList.add('text-indigo-600');
-            } else {
-                icon.classList.remove('animate-spin');
-                btn.classList.remove('text-indigo-600');
-            }
+        function setSyncing(s) {
+            const b = document.getElementById('syncBtn'); if (!b) return;
+            const i = b.querySelector('i');
+            if (s) { i.classList.add('animate-spin'); b.classList.add('text-indigo-600'); }
+            else { i.classList.remove('animate-spin'); b.classList.remove('text-indigo-600'); }
         }
     </script>
 </body>
