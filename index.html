@@ -246,7 +246,9 @@
                     </div>`;
             }
 
-            state.expenses.forEach(exp => {
+            const recent = state.expenses.slice(0, 8);
+recent.forEach(exp => {
+
                 const payer = state.members.find(m => m.id === exp.payerId)?.name || '不明';
                 
                 const card = document.createElement('button');
