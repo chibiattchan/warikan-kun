@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>わりかん君 Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.css">
@@ -12,10 +12,11 @@
         body {
             font-family: 'Noto Sans JP', sans-serif;
             -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none; /* スマホの引っ張り更新防止 */
         }
 
         .bottom-sheet {
-            transition: transform 0.3s ease-out;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             transform: translateY(100%);
         }
 
@@ -32,12 +33,17 @@
             -webkit-appearance: none;
             margin: 0;
         }
+
+        /* タップ領域の確保 */
+        button, select, input {
+            min-height: 44px;
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 pb-24">
+<body class="bg-slate-50 text-slate-900 pb-32">
 
     <!-- Header -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 px-4 h-16 flex items-center justify-between shadow-sm">
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 h-16 flex items-center justify-between shadow-sm">
         <div class="flex items-center gap-2 overflow-hidden">
             <div class="bg-indigo-600 p-2 rounded-xl shrink-0 text-white">
                 <i data-lucide="calculator" size="18"></i>
@@ -45,7 +51,7 @@
             <div class="overflow-hidden">
                 <input id="projectTitle" type="text" value="新しい旅行" 
                     class="text-sm font-black bg-transparent border-none focus:ring-0 w-full truncate text-slate-800 outline-none">
-                <div id="projectIdDisplay" class="text-[10px] text-slate-400 px-1 uppercase tracking-tighter truncate">ID: LOADING...</div>
+                <div id="projectIdDisplay" class="text-[10px] text-slate-400 px-1 uppercase tracking-tighter truncate leading-none">ID: LOADING...</div>
             </div>
         </div>
         
@@ -60,12 +66,12 @@
     </header>
 
     <!-- Tabs -->
-    <div class="flex p-2 bg-white border-b border-slate-200 sticky top-16 z-30">
+    <div class="flex p-2 bg-white border-b border-slate-200 sticky top-16 z-40">
         <button onclick="switchTab('input')" id="tab-input" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-200">
-            <i data-lucide="layout-grid" size="16"></i> かんたん入力
+            <i data-lucide="layout-grid" size="16"></i> 入力
         </button>
         <button onclick="switchTab('list')" id="tab-list" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50">
-            <i data-lucide="list" size="16"></i> 一覧で確認
+            <i data-lucide="list" size="16"></i> 一覧
         </button>
     </div>
 
@@ -76,14 +82,14 @@
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-slate-900 rounded-3xl p-5 text-white shadow-xl">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">合計支出</p>
-                    <div id="totalAmount" class="text-2xl font-black">¥0</div>
+                    <div id="totalAmount" class="text-2xl font-black italic tracking-tighter">¥0</div>
                 </div>
                 <div class="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col justify-center">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">メンバー</p>
                     <div class="flex items-center justify-between">
                         <span id="memberCount" class="text-xl font-black text-slate-800">1人</span>
-                        <button onclick="addMember()" class="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 active:scale-90 transition-transform">
-                            <i data-lucide="plus" size="18"></i>
+                        <button onclick="addMember(event)" class="w-10 h-10 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 active:scale-90 transition-transform shadow-sm">
+                            <i data-lucide="user-plus" size="20"></i>
                         </button>
                     </div>
                 </div>
@@ -93,7 +99,7 @@
             <div class="space-y-3">
                 <div class="flex items-center justify-between px-1">
                     <h2 class="font-bold text-slate-500 text-sm">最近の支出</h2>
-                    <button onclick="switchTab('list')" class="text-xs font-bold text-indigo-600">すべて見る</button>
+                    <button onclick="switchTab('list')" class="text-xs font-bold text-indigo-600">すべて表示</button>
                 </div>
                 <div id="recentExpensesList" class="space-y-3">
                     <!-- Dynamic Content -->
@@ -103,35 +109,35 @@
 
         <!-- List View -->
         <div id="view-list" class="hidden space-y-4">
-            <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                <table class="w-full text-sm">
+            <div class="bg-white rounded-3xl border border-slate-200 overflow-x-auto shadow-sm no-scrollbar">
+                <table class="w-full text-sm min-w-[500px]">
                     <thead class="bg-slate-50 border-b border-slate-100">
                         <tr id="fullTableHeadRow"></tr>
-                      </thead>
-                      
+                    </thead>
                     <tbody id="fullExpensesTable" class="divide-y divide-slate-50">
                         <!-- Dynamic Content -->
                     </tbody>
                 </table>
             </div>
+            <p class="text-center text-[10px] text-slate-400">横にスクロールして比率を調整できます</p>
         </div>
 
         <!-- Results Section -->
         <div class="space-y-4 pt-4">
             <div class="flex items-center gap-2 px-1 text-indigo-600">
-                <i data-lucide="arrow-right" size="20"></i>
+                <i data-lucide="check-circle-2" size="20"></i>
                 <h2 class="font-bold text-slate-800 text-lg">精算結果</h2>
             </div>
             
             <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">精算プラン</h3>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">送金プラン</h3>
                 <div id="settlementPlan" class="space-y-3 text-center py-4 text-slate-400 text-sm italic">
                     貸し借りは現在ありません
                 </div>
             </div>
 
             <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">個人別の収支</h3>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">個人別の残高</h3>
                 <div id="memberBalances" class="space-y-2">
                     <!-- Dynamic Content -->
                 </div>
@@ -140,36 +146,37 @@
     </main>
 
     <!-- Floating Add Button -->
-    <button onclick="createNewExpense()" class="fixed bottom-6 right-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl shadow-indigo-400 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40">
+    <button onclick="createNewExpense(event)" class="fixed bottom-8 right-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl shadow-indigo-400 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]">
         <i data-lucide="plus" size="32"></i>
     </button>
 
     <!-- Bottom Sheet (Expense Editor) -->
-    <div id="expenseModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeExpenseModal()"></div>
-        <div class="bottom-sheet fixed inset-x-0 bottom-0 w-full max-w-lg mx-auto bg-white rounded-t-3xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto no-scrollbar">
+    <div id="expenseModal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeExpenseModal()"></div>
+        <div class="bottom-sheet fixed inset-x-0 bottom-0 w-full max-w-lg mx-auto bg-white rounded-t-[2.5rem] shadow-2xl p-6 max-h-[92vh] overflow-y-auto no-scrollbar">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-bold text-slate-800">支出を編集</h3>
+                <h3 class="text-xl font-black text-slate-800">支出の編集</h3>
                 <button onclick="closeExpenseModal()" class="p-2 bg-slate-100 rounded-full text-slate-600">
                     <i data-lucide="x" size="20"></i>
                 </button>
             </div>
-            <div id="modalContent" class="space-y-6 pb-10">
+            <div id="modalContent" class="space-y-6 pb-20">
                 <!-- Dynamic Content -->
             </div>
         </div>
     </div>
 
     <!-- Config Modal -->
-    <div id="configModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
+    <div id="configModal" class="fixed inset-0 z-[110] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onclick="toggleConfig()"></div>
-        <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-8">
-            <h2 class="text-2xl font-black text-slate-800 mb-2">同期設定 (GAS)</h2>
-            <p class="text-sm text-slate-500 mb-6">Google Apps ScriptのURLを入力してください。</p>
-            <input id="gasUrlInput" type="url" placeholder="https://script.google.com/macros/s/.../exec"
-                class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-4 text-sm font-medium outline-none focus:border-indigo-500 transition-all mb-6">
-            <button onclick="saveConfig()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold active:scale-95 transition-all">
-                設定を保存して同期
+        <div class="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl p-8">
+            <h2 class="text-2xl font-black text-slate-800 mb-2">同期設定</h2>
+            <p class="text-sm text-slate-500 mb-6 font-medium">GASのURLを入力すると、複数デバイスで同期されます。</p>
+            <input id="gasUrlInput" type="url" placeholder="https://script.google.com/..."
+                class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-4 text-sm font-bold outline-none focus:border-indigo-500 transition-all mb-6">
+            <button onclick="saveConfig()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-indigo-100 active:scale-95 transition-all">
+                設定を保存
             </button>
         </div>
     </div>
@@ -197,7 +204,7 @@
                 try {
                     const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?pid=' + pid;
                     window.history.replaceState({ path: newUrl }, '', newUrl);
-                } catch(e) { console.warn("History API restricted"); }
+                } catch(e) {}
             }
             
             state.projectId = pid;
@@ -224,7 +231,6 @@
         function render() {
             const calculation = calculate();
 
-            // Header/Summary
             document.getElementById('projectTitle').value = state.title;
             document.getElementById('totalAmount').innerText = formatCurrency(calculation.total);
             document.getElementById('memberCount').innerText = `${state.members.length}人`;
@@ -232,120 +238,85 @@
             // Expenses List
             const listContainer = document.getElementById('recentExpensesList');
             const tableBody = document.getElementById('fullExpensesTable');
-            // ===== 一覧テーブルのヘッダーを動的に生成 =====
             const headRow = document.getElementById('fullTableHeadRow');
+
+            // Table Header
             if (headRow) {
-            headRow.innerHTML = `
-                <th class="p-4 text-left font-bold text-slate-400 text-[10px] uppercase">
-                項目
-                </th>
-
-                <th class="p-4 text-right font-bold text-slate-400 text-[10px] uppercase">
-                金額
-                </th>
-
-                ${state.members.map(m => `
-                <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase border-l border-slate-200 min-w-[90px]">
-                    ${m.name}
-                </th>
-                `).join('')}
-
-                <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase">
-                詳細
-                </th>
-            `;
+                headRow.innerHTML = `
+                    <th class="p-4 text-left font-bold text-slate-400 text-[10px] uppercase min-w-[120px]">項目</th>
+                    <th class="p-4 text-right font-bold text-slate-400 text-[10px] uppercase min-w-[100px]">金額</th>
+                    ${state.members.map(m => `
+                        <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase border-l border-slate-100 min-w-[90px] truncate">
+                            ${escapeHtml(m.name)}
+                        </th>
+                    `).join('')}
+                    <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase">詳細</th>
+                `;
             }
 
             listContainer.innerHTML = '';
             tableBody.innerHTML = '';
-                        const headerRow = document.getElementById('listHeaderRow');
-                        headerRow.innerHTML = `
-                <th class="p-4 text-left font-bold text-slate-400 text-[10px] uppercase">項目</th>
-                <th class="p-4 text-right font-bold text-slate-400 text-[10px] uppercase">金額</th>
-                <th class="p-4 text-left font-bold text-slate-400 text-[10px] uppercase">支払</th>
-
-                ${state.members.map(m => `
-                    <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase border-l border-slate-100 min-w-[90px]">
-                    ${escapeHtml(m.name)}
-                    </th>
-                `).join('')}
-
-                <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase">詳細</th>
-                `;
-
-
 
             if (state.expenses.length === 0) {
                 listContainer.innerHTML = `
                     <div class="bg-white rounded-3xl p-10 border-2 border-dashed border-slate-200 text-center">
                         <i data-lucide="receipt" class="mx-auto text-slate-300 mb-2" size="32"></i>
-                        <p class="text-sm text-slate-400 font-medium">最初の支出を追加しましょう</p>
+                        <p class="text-sm text-slate-400 font-bold">支出がありません</p>
                     </div>`;
             }
 
-            const recent = state.expenses.slice(0, 8);
-recent.forEach(exp => {
-
-                const payer = state.members.find(m => m.id === exp.payerId)?.name || '不明';
+            state.expenses.forEach(exp => {
+                const payer = state.members.find(m => m.id === exp.payerId)?.name || '削除済み';
                 
+                // Dashboard Card
                 const card = document.createElement('button');
                 card.className = "w-full bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between hover:border-indigo-200 transition-all text-left shadow-sm active:scale-[0.98]";
-                card.onclick = () => openExpenseModal(exp.id);
+                card.onclick = (e) => { e.preventDefault(); openExpenseModal(exp.id); };
                 card.innerHTML = `
                     <div class="overflow-hidden pr-2">
-                        <div class="font-bold text-slate-800 truncate">${exp.title || '無題の支出'}</div>
-                        <div class="text-xs text-slate-400 flex items-center gap-1 mt-1">
-                            <span class="font-bold text-indigo-500 truncate max-w-[80px]">${payer}</span>
-                            <span>が支払い</span>
+                        <div class="font-bold text-slate-800 truncate">${escapeHtml(exp.title || '無題')}</div>
+                        <div class="text-xs text-slate-400 flex items-center gap-1 mt-1 font-medium">
+                            <span class="font-bold text-indigo-500 truncate max-w-[80px]">${escapeHtml(payer)}</span>
+                            <span>支払</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-3 shrink-0">
-                        <div class="text-lg font-black text-slate-800">${formatCurrency(exp.amount)}</div>
+                        <div class="text-lg font-black text-slate-800 tracking-tighter">${formatCurrency(exp.amount)}</div>
                         <i data-lucide="chevron-right" size="18" class="text-slate-300"></i>
                     </div>`;
                 listContainer.appendChild(card);
 
+                // Full Table Row
                 const row = document.createElement('tr');
-                row.className = "active:bg-slate-50 cursor-pointer";
+                row.className = "active:bg-slate-50 transition-colors";
                 row.onclick = () => openExpenseModal(exp.id);
-                const weightColsHtml = state.members.map(m => {
+                
+                const weightsHtml = state.members.map(m => {
+                    const w = exp.weights[m.id] !== undefined ? exp.weights[m.id] : 0;
+                    return `
+                        <td class="p-2 text-center border-l border-slate-50 min-w-[90px]">
+                            <div class="flex items-center justify-center gap-1" onclick="event.stopPropagation()">
+                                <button onclick="toggleParticipation('${exp.id}', '${m.id}')" 
+                                    class="w-8 h-8 rounded-lg font-black text-[10px] border ${w > 0 ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-300 border-slate-200'}">
+                                    ${w > 0 ? 'ON' : 'OFF'}
+                                </button>
+                                <input type="number" step="0.1" value="${Number(w).toFixed(1)}" 
+                                    onchange="updateWeightDirect('${exp.id}', '${m.id}', this.value)"
+                                    class="w-12 h-8 bg-slate-50 border border-slate-100 rounded-lg text-center text-xs font-bold outline-none focus:border-indigo-300">
+                            </div>
+                        </td>
+                    `;
+                }).join('');
 
-  const w = (exp.weights && exp.weights[m.id] !== undefined) ? exp.weights[m.id] : 0;
-  const wNum = Number(w) || 0;
-  const on = wNum > 0;
-
-  return `
-    <td class="p-3 text-center border-l border-slate-100 min-w-[90px]">
-      <div class="flex items-center justify-center gap-1">
-        <button class="w-9 h-9 rounded-2xl font-black border ${on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-400 border-slate-200'}"
-          onclick="event.stopPropagation(); toggleParticipation('${exp.id}','${m.id}')">
-          ${on ? '1' : '0'}
-        </button>
-        <input class="w-16 h-9 bg-slate-50 border border-slate-200 rounded-2xl text-center font-black outline-none"
-          inputmode="decimal"
-          value="${(Number(wNum)).toFixed(1)}"
-          onclick="event.stopPropagation();"
-          onchange="updateWeightDirect('${exp.id}','${m.id}', this.value)" />
-      </div>
-    </td>
-  `;
-}).join('');
-
-row.innerHTML = `
-  <td class="p-4">
-    <div class="font-bold text-slate-700">${exp.title || '---'}</div>
-    <div class="text-[10px] text-slate-400">${payer}</div>
-  </td>
-
-  <td class="p-4 text-right font-black text-slate-800">${formatCurrency(exp.amount)}</td>
-
-  ${weightColsHtml}
-
-  <td class="p-4 text-center text-indigo-500">
-    <i data-lucide="settings" size="16"></i>
-  </td>
-`;
-
+                row.innerHTML = `
+                    <td class="p-4">
+                        <div class="font-bold text-slate-700 truncate max-w-[120px]">${escapeHtml(exp.title || '無題')}</div>
+                        <div class="text-[10px] font-bold text-slate-400">${escapeHtml(payer)}</div>
+                    </td>
+                    <td class="p-4 text-right font-black text-slate-800">${formatCurrency(exp.amount)}</td>
+                    ${weightsHtml}
+                    <td class="p-4 text-center text-indigo-500"><i data-lucide="settings" size="16"></i></td>
+                `;
                 tableBody.appendChild(row);
             });
 
@@ -353,24 +324,22 @@ row.innerHTML = `
             const planContainer = document.getElementById('settlementPlan');
             if (calculation.plan.length === 0) {
                 planContainer.innerHTML = '貸し借りは現在ありません';
-                planContainer.className = "space-y-3 text-center py-6 text-slate-400 text-sm italic";
             } else {
-                planContainer.className = "space-y-3";
                 planContainer.innerHTML = '';
                 calculation.plan.forEach(p => {
                     const div = document.createElement('div');
-                    div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100";
+                    div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-sm";
                     div.innerHTML = `
                         <div class="flex flex-col min-w-[80px]">
-                            <span class="text-[10px] font-bold text-rose-500 uppercase text-left">From</span>
-                            <span class="font-bold text-slate-700 truncate text-left">${p.fromName}</span>
+                            <span class="text-[9px] font-bold text-rose-400 uppercase text-left tracking-tighter">支払う人</span>
+                            <span class="font-bold text-slate-700 truncate text-left">${escapeHtml(p.fromName)}</span>
                         </div>
-                        <i data-lucide="arrow-right" class="text-slate-300 shrink-0" size="16"></i>
+                        <i data-lucide="arrow-right" class="text-slate-300 mx-2" size="14"></i>
                         <div class="flex flex-col min-w-[80px]">
-                            <span class="text-[10px] font-bold text-emerald-500 uppercase text-right">To</span>
-                            <span class="font-bold text-slate-700 truncate text-right">${p.toName}</span>
+                            <span class="text-[9px] font-bold text-emerald-400 uppercase text-right tracking-tighter">受取る人</span>
+                            <span class="font-bold text-slate-700 truncate text-right">${escapeHtml(p.toName)}</span>
                         </div>
-                        <div class="ml-4 pl-4 border-l border-slate-200 text-lg font-black text-slate-800 shrink-0">
+                        <div class="ml-4 pl-4 border-l border-slate-200 text-lg font-black text-slate-800 shrink-0 italic">
                             ${formatCurrency(p.amount)}
                         </div>`;
                     planContainer.appendChild(div);
@@ -383,10 +352,10 @@ row.innerHTML = `
             state.members.forEach(m => {
                 const b = calculation.balances[m.id] || 0;
                 const div = document.createElement('div');
-                div.className = "flex items-center justify-between py-2 border-b border-slate-50 last:border-0";
+                div.className = "flex items-center justify-between py-3 border-b border-slate-50 last:border-0";
                 div.innerHTML = `
-                    <span class="font-bold text-slate-600">${m.name}</span>
-                    <span class="font-black ${b > 0.1 ? 'text-emerald-600' : b < -0.1 ? 'text-rose-500' : 'text-slate-300'}">
+                    <span class="font-bold text-slate-600">${escapeHtml(m.name)}</span>
+                    <span class="font-black italic ${b > 0.1 ? 'text-emerald-500' : b < -0.1 ? 'text-rose-400' : 'text-slate-300'}">
                         ${b > 0.1 ? '+' : ''}${formatCurrency(b)}
                     </span>`;
                 balContainer.appendChild(div);
@@ -423,8 +392,9 @@ row.innerHTML = `
 
             const debtors = [], creditors = [];
             Object.entries(balances).forEach(([id, amt]) => {
-                if (amt < -0.1) debtors.push({ id, amt, name: state.members.find(m => m.id === id)?.name || '不明' });
-                else if (amt > 0.1) creditors.push({ id, amt, name: state.members.find(m => m.id === id)?.name || '不明' });
+                const name = state.members.find(m => m.id === id)?.name || '不明';
+                if (amt < -0.1) debtors.push({ id, amt, name });
+                else if (amt > 0.1) creditors.push({ id, amt, name });
             });
 
             debtors.sort((a, b) => a.amt - b.amt);
@@ -450,25 +420,24 @@ row.innerHTML = `
         }
 
         // --- Actions ---
-        function addMember() {
-            const name = prompt('メンバー名を入力してください');
+        function addMember(e) {
+            if (e) e.preventDefault();
+            const name = prompt('追加するメンバーの名前：');
             if (!name || name.trim() === "") return;
             
             const id = 'm_' + Math.random().toString(36).substr(2, 5);
             state.members.push({ id, name: name.trim() });
             
-            // 重要: 既存の全ての支出に対し、新メンバーの比率を初期化する
-            state.expenses.forEach(e => {
-                if (e.weights[id] === undefined) {
-                    e.weights[id] = 1; 
-                }
+            state.expenses.forEach(exp => {
+                if (exp.weights[id] === undefined) exp.weights[id] = 1;
             });
             
             render();
             triggerAutoSave();
         }
 
-        function createNewExpense() {
+        function createNewExpense(e) {
+            if (e) e.preventDefault();
             const id = 'e_' + Math.random().toString(36).substr(2, 9);
             const weights = {};
             state.members.forEach(m => weights[m.id] = 1);
@@ -497,12 +466,12 @@ row.innerHTML = `
                 const w = exp.weights[m.id] !== undefined ? exp.weights[m.id] : 0;
                 membersHtml += `
                     <div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                        <span class="font-bold text-slate-700 truncate max-w-[120px]">${m.name}</span>
+                        <span class="font-bold text-slate-700 truncate max-w-[120px]">${escapeHtml(m.name)}</span>
                         <div class="flex items-center gap-2">
-                            <button onclick="updateWeight('${id}', '${m.id}', -0.1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm"><i data-lucide="minus" size="14"></i></button>
-                            <span class="w-8 text-center font-black text-indigo-600">${w.toFixed(1)}</span>
-                            <button onclick="updateWeight('${id}', '${m.id}', 0.1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm"><i data-lucide="plus" size="14"></i></button>
-                            <button onclick="toggleParticipation('${id}', '${m.id}')" class="ml-2 px-3 py-1 rounded-lg text-[10px] font-bold ${w > 0 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}">
+                            <button onclick="updateWeight('${id}', '${m.id}', -0.1)" class="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm border border-slate-100"><i data-lucide="minus" size="14"></i></button>
+                            <span class="w-8 text-center font-black text-indigo-600">${Number(w).toFixed(1)}</span>
+                            <button onclick="updateWeight('${id}', '${m.id}', 0.1)" class="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm border border-slate-100"><i data-lucide="plus" size="14"></i></button>
+                            <button onclick="toggleParticipation('${id}', '${m.id}')" class="ml-1 px-3 h-10 rounded-xl text-[10px] font-black tracking-tighter ${w > 0 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}">
                                 ${w > 0 ? '参加' : '除外'}
                             </button>
                         </div>
@@ -510,42 +479,53 @@ row.innerHTML = `
             });
 
             content.innerHTML = `
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">内容</label>
-                    <input type="text" oninput="updateExpData('${id}', 'title', this.value)" value="${exp.title}" class="w-full text-lg font-bold border-b-2 border-slate-100 focus:border-indigo-500 outline-none py-2" placeholder="例: ランチ">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">金額</label>
-                        <input type="number" oninput="updateExpData('${id}', 'amount', this.value)" value="${exp.amount || ''}" class="w-full text-xl font-black border-b-2 border-slate-100 focus:border-indigo-500 outline-none py-2" placeholder="0">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">項目</label>
+                        <input type="text" oninput="updateExpData('${id}', 'title', this.value)" value="${escapeHtml(exp.title)}" class="w-full text-lg font-bold border-b-2 border-slate-100 focus:border-indigo-500 outline-none py-3" placeholder="例: カフェ">
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">支払人</label>
-                        <select onchange="updateExpData('${id}', 'payerId', this.value)" class="w-full bg-slate-50 rounded-xl px-3 py-3 font-bold outline-none border-none">
-                            ${state.members.map(m => `<option value="${m.id}" ${m.id === exp.payerId ? 'selected' : ''}>${m.name}</option>`).join('')}
-                        </select>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">金額 (¥)</label>
+                            <input type="number" inputmode="numeric" oninput="updateExpData('${id}', 'amount', this.value)" value="${exp.amount || ''}" class="w-full text-xl font-black border-b-2 border-slate-100 focus:border-indigo-500 outline-none py-3" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">支払った人</label>
+                            <select onchange="updateExpData('${id}', 'payerId', this.value)" class="w-full bg-slate-50 rounded-xl px-2 font-bold outline-none border-none h-14">
+                                ${state.members.map(m => `<option value="${m.id}" ${m.id === exp.payerId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase mb-4">比率設定</label>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">負担比率 (1人あたり)</label>
                     <div class="space-y-3">${membersHtml}</div>
                 </div>
-                <button onclick="deleteExpense('${id}')" class="w-full py-4 text-rose-500 font-bold flex items-center justify-center gap-2 border-2 border-rose-50 rounded-2xl mt-4 active:bg-rose-50 transition-colors">
-                    <i data-lucide="trash-2" size="18"></i> 支出を削除
-                </button>`;
+                <div class="pt-4 border-t border-slate-100">
+                    <button onclick="deleteExpense('${id}')" class="w-full h-14 text-rose-500 font-black flex items-center justify-center gap-2 border-2 border-rose-50 rounded-2xl active:bg-rose-50 transition-colors">
+                        <i data-lucide="trash-2" size="18"></i> 削除する
+                    </button>
+                </div>`;
 
-            document.getElementById('expenseModal').classList.remove('hidden');
-            setTimeout(() => document.querySelector('.bottom-sheet').classList.add('active'), 10);
+            const modal = document.getElementById('expenseModal');
+            modal.classList.remove('hidden');
+            // スマホブラウザでの描画待機
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    modal.querySelector('.bottom-sheet').classList.add('active');
+                });
+            });
             lucide.createIcons();
         }
 
         function closeExpenseModal() {
-            document.querySelector('.bottom-sheet').classList.remove('active');
+            const sheet = document.querySelector('.bottom-sheet');
+            sheet.classList.remove('active');
             setTimeout(() => {
                 document.getElementById('expenseModal').classList.add('hidden');
                 editingExpenseId = null;
+                triggerAutoSave();
             }, 300);
-            triggerAutoSave();
         }
 
         function updateExpData(id, key, val) {
@@ -559,39 +539,35 @@ row.innerHTML = `
         function updateWeight(expId, memId, diff) {
             const exp = state.expenses.find(e => e.id === expId);
             if (exp) {
-                const current = exp.weights[memId] || 0;
+                const current = parseFloat(exp.weights[memId]) || 0;
                 exp.weights[memId] = Math.max(0, Math.round((current + diff) * 10) / 10);
                 openExpenseModal(expId); 
                 render();
             }
         }
+
         function updateWeightDirect(expId, memId, val) {
             const exp = state.expenses.find(e => e.id === expId);
-            if (!exp) return;
-
-            let n = Number(val);
-            if (!Number.isFinite(n)) n = 0;
-            if (n < 0) n = 0;
-
-            exp.weights[memId] = n;
-
-            render();
-            triggerAutoSave();
+            if (exp) {
+                const n = parseFloat(val);
+                exp.weights[memId] = isNaN(n) ? 0 : Math.max(0, n);
+                render();
+                triggerAutoSave();
             }
-
+        }
 
         function toggleParticipation(expId, memId) {
             const exp = state.expenses.find(e => e.id === expId);
             if (exp) {
-                const current = exp.weights[memId] || 0;
+                const current = parseFloat(exp.weights[memId]) || 0;
                 exp.weights[memId] = current > 0 ? 0 : 1;
-                openExpenseModal(expId);
+                if (editingExpenseId === expId) openExpenseModal(expId);
                 render();
             }
         }
 
         function deleteExpense(id) {
-            if (confirm('削除しますか？')) {
+            if (confirm('この支出を削除しますか？')) {
                 state.expenses = state.expenses.filter(e => e.id !== id);
                 closeExpenseModal();
                 render();
@@ -603,6 +579,13 @@ row.innerHTML = `
             return '¥' + Math.round(n).toLocaleString();
         }
 
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+            });
+        }
+
         function switchTab(tab) {
             document.getElementById('view-input').classList.toggle('hidden', tab !== 'input');
             document.getElementById('view-list').classList.toggle('hidden', tab !== 'list');
@@ -610,13 +593,12 @@ row.innerHTML = `
             const btnIn = document.getElementById('tab-input');
             const btnLi = document.getElementById('tab-list');
             
-            if (tab === 'input') {
-                btnIn.className = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-200";
-                btnLi.className = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50";
-            } else {
-                btnLi.className = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-200";
-                btnIn.className = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50";
-            }
+            const activeClass = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-200";
+            const inactiveClass = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50";
+            
+            btnIn.className = tab === 'input' ? activeClass : inactiveClass;
+            btnLi.className = tab === 'list' ? activeClass : inactiveClass;
+            
             lucide.createIcons();
         }
 
@@ -639,10 +621,9 @@ row.innerHTML = `
             tempInput.select();
             document.execCommand("copy");
             document.body.removeChild(tempInput);
-            alert("URLをコピーしました。メンバーを招待できます。");
+            alert("共有URLをコピーしました！");
         }
 
-        // --- Cloud Sync ---
         let autoSaveTimer = null;
         function triggerAutoSave() {
             if (autoSaveTimer) clearTimeout(autoSaveTimer);
@@ -684,11 +665,12 @@ row.innerHTML = `
         function setSyncing(isSync) {
             const btn = document.getElementById('syncBtn');
             if (!btn) return;
+            const icon = btn.querySelector('i');
             if (isSync) {
-                btn.querySelector('i').classList.add('animate-spin');
+                icon.classList.add('animate-spin');
                 btn.classList.add('text-indigo-600');
             } else {
-                btn.querySelector('i').classList.remove('animate-spin');
+                icon.classList.remove('animate-spin');
                 btn.classList.remove('text-indigo-600');
             }
         }
