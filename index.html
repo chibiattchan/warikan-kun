@@ -106,12 +106,9 @@
             <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                 <table class="w-full text-sm">
                     <thead class="bg-slate-50 border-b border-slate-100">
-                        <tr>
-                            <th class="p-4 text-left font-bold text-slate-400 text-[10px] uppercase">項目</th>
-                            <th class="p-4 text-right font-bold text-slate-400 text-[10px] uppercase">金額</th>
-                            <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase">詳細</th>
-                        </tr>
-                    </thead>
+                        <tr id="fullTableHeadRow"></tr>
+                      </thead>
+                      
                     <tbody id="fullExpensesTable" class="divide-y divide-slate-50">
                         <!-- Dynamic Content -->
                     </tbody>
@@ -235,6 +232,30 @@
             // Expenses List
             const listContainer = document.getElementById('recentExpensesList');
             const tableBody = document.getElementById('fullExpensesTable');
+            // ===== 一覧テーブルのヘッダーを動的に生成 =====
+            const headRow = document.getElementById('fullTableHeadRow');
+            if (headRow) {
+            headRow.innerHTML = `
+                <th class="p-4 text-left font-bold text-slate-400 text-[10px] uppercase">
+                項目
+                </th>
+
+                <th class="p-4 text-right font-bold text-slate-400 text-[10px] uppercase">
+                金額
+                </th>
+
+                ${state.members.map(m => `
+                <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase border-l border-slate-200 min-w-[90px]">
+                    ${m.name}
+                </th>
+                `).join('')}
+
+                <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase">
+                詳細
+                </th>
+            `;
+            }
+
             listContainer.innerHTML = '';
             tableBody.innerHTML = '';
 
@@ -271,13 +292,44 @@ recent.forEach(exp => {
                 const row = document.createElement('tr');
                 row.className = "active:bg-slate-50 cursor-pointer";
                 row.onclick = () => openExpenseModal(exp.id);
-                row.innerHTML = `
-                    <td class="p-4">
-                        <div class="font-bold text-slate-700">${exp.title || '---'}</div>
-                        <div class="text-[10px] text-slate-400">${payer}</div>
-                    </td>
-                    <td class="p-4 text-right font-black text-slate-800">${formatCurrency(exp.amount)}</td>
-                    <td class="p-4 text-center text-indigo-500"><i data-lucide="settings" size="16"></i></td>`;
+                const weightColsHtml = state.members.map(m => {
+
+  const w = (exp.weights && exp.weights[m.id] !== undefined) ? exp.weights[m.id] : 0;
+  const wNum = Number(w) || 0;
+  const on = wNum > 0;
+
+  return `
+    <td class="p-3 text-center border-l border-slate-100 min-w-[90px]">
+      <div class="flex items-center justify-center gap-1">
+        <button class="w-9 h-9 rounded-2xl font-black border ${on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-400 border-slate-200'}"
+          onclick="event.stopPropagation(); toggleParticipation('${exp.id}','${m.id}')">
+          ${on ? '1' : '0'}
+        </button>
+        <input class="w-16 h-9 bg-slate-50 border border-slate-200 rounded-2xl text-center font-black outline-none"
+          inputmode="decimal"
+          value="${(Number(wNum)).toFixed(1)}"
+          onclick="event.stopPropagation();"
+          onchange="updateWeightDirect('${exp.id}','${m.id}', this.value)" />
+      </div>
+    </td>
+  `;
+}).join('');
+
+row.innerHTML = `
+  <td class="p-4">
+    <div class="font-bold text-slate-700">${exp.title || '---'}</div>
+    <div class="text-[10px] text-slate-400">${payer}</div>
+  </td>
+
+  <td class="p-4 text-right font-black text-slate-800">${formatCurrency(exp.amount)}</td>
+
+  ${weightColsHtml}
+
+  <td class="p-4 text-center text-indigo-500">
+    <i data-lucide="settings" size="16"></i>
+  </td>
+`;
+
                 tableBody.appendChild(row);
             });
 
@@ -497,6 +549,20 @@ recent.forEach(exp => {
                 render();
             }
         }
+        function updateWeightDirect(expId, memId, val) {
+            const exp = state.expenses.find(e => e.id === expId);
+            if (!exp) return;
+
+            let n = Number(val);
+            if (!Number.isFinite(n)) n = 0;
+            if (n < 0) n = 0;
+
+            exp.weights[memId] = n;
+
+            render();
+            triggerAutoSave();
+            }
+
 
         function toggleParticipation(expId, memId) {
             const exp = state.expenses.find(e => e.id === expId);
