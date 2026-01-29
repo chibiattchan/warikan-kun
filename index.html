@@ -248,6 +248,7 @@ function toNum(v, fallback=0) {
 }
 function round1(n) { return Math.round(n * 10) / 10; }
 
+/* toast */
 let toastTimer = null;
 function toast(msg) {
   const t = document.getElementById('toast');
@@ -272,8 +273,9 @@ function setPidToUrl(pid) {
   history.replaceState(null, '', url.toString());
 }
 function generatePid() {
-  // 推測されにくい長めのID
-  const a = crypto?.getRandomValues ? crypto.getRandomValues(new Uint8Array(16)) : Array.from({length:16},()=>Math.floor(Math.random()*256));
+  const a = (crypto?.getRandomValues)
+    ? crypto.getRandomValues(new Uint8Array(16))
+    : Array.from({length:16},()=>Math.floor(Math.random()*256));
   const hex = Array.from(a, b => b.toString(16).padStart(2,'0')).join('');
   return 'p_' + Date.now() + '_' + hex;
 }
@@ -292,11 +294,10 @@ let state = {
   expenses: []
 };
 
-/* ===================== Sync settings ===================== */
+/* ===================== Sync settings (optional) ===================== */
 const GAS_URL_KEY = 'warikan_gas_url';
 let syncSettings = {
-  url: localStorage.getItem(GAS_URL_KEY) || '',
-  isSyncing: false
+  url: localStorage.getItem(GAS_URL_KEY) || ''
 };
 let syncTimer = null;
 
@@ -323,7 +324,6 @@ function updateSyncUI(status) {
 async function saveToCloud() {
   if (!syncSettings.url) return;
   updateSyncUI('syncing');
-
   try {
     const body = {
       action: 'save',
@@ -333,14 +333,11 @@ async function saveToCloud() {
       payload: state,
       updatedAt: new Date().toISOString()
     };
-
     const res = await fetch(syncSettings.url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-
-    // GASが {ok:true} を返す想定。no-corsは使わない。
     const json = await res.json();
     if (!json || json.ok !== true) throw new Error(json?.error || 'sync failed');
     updateSyncUI('success');
@@ -353,23 +350,18 @@ async function saveToCloud() {
 async function fetchFromCloud() {
   if (!syncSettings.url) return false;
   updateSyncUI('syncing');
-
   try {
     const url = new URL(syncSettings.url);
     url.searchParams.set('action', 'get');
     url.searchParams.set('projectId', state.projectId);
-
     const res = await fetch(url.toString(), { method: 'GET' });
     const json = await res.json();
-
     if (json && json.data) {
       state = json.data;
-      // pidだけはURL優先で維持
       state.projectId = getPidFromUrl() || state.projectId;
       updateSyncUI('success');
       return true;
     }
-
     updateSyncUI('success');
     return false;
   } catch (e) {
@@ -382,7 +374,6 @@ async function fetchFromCloud() {
 function triggerAutoSync() {
   if (!syncSettings.url) return;
   clearTimeout(syncTimer);
-  updateSyncUI('syncing');
   syncTimer = setTimeout(saveToCloud, 1200);
 }
 
@@ -396,7 +387,6 @@ function tabBtnClass_(active) {
 function setViewTab(tab) {
   state.viewTab = tab;
   localStorage.setItem('warikan_view_tab', tab);
-  renderTabs();
   render();
 }
 function renderTabs() {
@@ -416,13 +406,13 @@ function renderTabs() {
 /* ===================== Members / Expenses ===================== */
 function addMember() {
   const input = document.getElementById('newMemberInput');
-  const name = input.value.trim();
+  const name = (input?.value || '').trim();
   if (!name) return;
 
   const id = 'm' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
   state.members.push({ id, name });
 
-  // 途中参加：過去支出にはデフォ0（必要なら手で入れる）
+  // 途中参加：過去支出にはデフォ0
   state.expenses.forEach(e => {
     if (!e.weights) e.weights = {};
     e.weights[id] = 0;
@@ -445,7 +435,10 @@ function deleteMember(mid) {
 }
 
 function addExpense() {
-  if (state.members.length === 0) return;
+  if (state.members.length === 0) {
+    toast('先にメンバーを追加してね');
+    return;
+  }
 
   const id = 'e' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
   const weights = {};
@@ -461,7 +454,7 @@ function addExpense() {
 
   calculateAndRender();
 
-  // モバイルならすぐ編集シート開くと気持ちいい
+  // モバイルはすぐ編集シート
   if (window.matchMedia('(max-width: 768px)').matches) {
     openExpenseSheet(id);
   }
@@ -490,9 +483,8 @@ function setWeight(eid, mid, value) {
   let n = toNum(value, 0);
   if (n < 0) n = 0;
   exp.weights[mid] = n;
-  calculateAndRender(false); // ここでシート描画を壊さない
+  calculateAndRender(false);
 }
-
 function stepWeight(eid, mid, delta) {
   const exp = state.expenses.find(e => e.id === eid);
   if (!exp) return;
@@ -503,7 +495,6 @@ function stepWeight(eid, mid, delta) {
   exp.weights[mid] = next;
   calculateAndRender(false);
 }
-
 function toggleWeight01(eid, mid) {
   const exp = state.expenses.find(e => e.id === eid);
   if (!exp) return;
@@ -517,17 +508,13 @@ function toggleWeight01(eid, mid) {
 function calculate() {
   const balances = {};
   state.members.forEach(m => balances[m.id] = 0);
-
   let totalSpent = 0;
 
   state.expenses.forEach(exp => {
     const amount = toNum(exp.amount, 0);
     totalSpent += amount;
-
-    // payer +amount
     if (balances[exp.payerId] !== undefined) balances[exp.payerId] += amount;
 
-    // split by weights
     let totalW = 0;
     state.members.forEach(m => totalW += toNum(exp.weights?.[m.id], 0));
 
@@ -539,7 +526,6 @@ function calculate() {
     }
   });
 
-  // settlement plan (min transfers)
   const debtors = [];
   const creditors = [];
   Object.entries(balances).forEach(([id, amt]) => {
@@ -547,8 +533,8 @@ function calculate() {
     else if (amt > 0.01) creditors.push({ id, amt });
   });
 
-  debtors.sort((a,b) => a.amt - b.amt);     // more negative first
-  creditors.sort((a,b) => b.amt - a.amt);   // more positive first
+  debtors.sort((a,b) => a.amt - b.amt);
+  creditors.sort((a,b) => b.amt - a.amt);
 
   const plan = [];
   let i = 0, j = 0;
@@ -564,8 +550,8 @@ function calculate() {
         amount: settle
       });
     }
-    d[i].amt += settle;   // less negative
-    c[j].amt -= settle;   // less positive
+    d[i].amt += settle;
+    c[j].amt -= settle;
     if (Math.abs(d[i].amt) < 0.01) i++;
     if (c[j].amt < 0.01) j++;
   }
@@ -578,15 +564,11 @@ function updateHeaderUI() {
   document.getElementById('currentProjectName').textContent = state.title || '（未設定）';
   document.getElementById('pidBadge').textContent = state.projectId || '-';
   const titleInput = document.getElementById('projectTitle');
-  if (titleInput && titleInput.value !== (state.title || '')) {
-    titleInput.value = state.title || '';
-  }
+  if (titleInput && titleInput.value !== (state.title || '')) titleInput.value = state.title || '';
 }
-
 function renderMemberChips() {
   const wrap = document.getElementById('memberChips');
   wrap.innerHTML = '';
-
   state.members.forEach(m => {
     const chip = document.createElement('div');
     chip.className = 'flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-2xl px-3 py-2';
@@ -623,7 +605,6 @@ function renderCards() {
     const weightsUI = state.members.map(m => {
       const w = toNum(exp.weights?.[m.id], 0);
       const on = w > 0;
-
       return `
         <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2">
           <div class="flex items-center gap-2 min-w-0">
@@ -632,11 +613,9 @@ function renderCards() {
             </div>
             <div class="font-bold truncate">${escapeHtml(m.name)}</div>
           </div>
-
           <div class="flex items-center gap-2">
             <button class="w-10 h-10 rounded-2xl font-black border transition-all ${on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-400 border-slate-200'}"
               onclick="toggleWeight01('${exp.id}','${m.id}')">${on ? '1' : '0'}</button>
-
             <div class="flex items-center bg-white border border-slate-200 rounded-2xl overflow-hidden">
               <button class="w-10 h-10 text-slate-600 font-black hover:bg-slate-50"
                 onclick="stepWeight('${exp.id}','${m.id}',-0.1)">−</button>
@@ -694,13 +673,11 @@ function renderCards() {
         <div class="space-y-2">${weightsUI}</div>
       </div>
     `;
-
     panel.appendChild(card);
   });
 }
 
 function renderTable() {
-  // header
   const headRow = document.getElementById('tableHeaderRow');
   headRow.innerHTML = `
     <th class="p-3 w-10"></th>
@@ -710,7 +687,6 @@ function renderTable() {
     ${state.members.map(m => `<th class="p-3 min-w-[90px] text-center border-l border-slate-200">${escapeHtml(m.name)}</th>`).join('')}
   `;
 
-  // body
   const tbody = document.getElementById('tableBody');
   tbody.innerHTML = '';
 
@@ -850,21 +826,17 @@ let activeEditExpenseId = null;
 
 function openExpenseSheet(eid) {
   activeEditExpenseId = eid;
-
   const overlay = document.getElementById('sheetOverlay');
   const sheet = document.getElementById('expenseSheet');
   if (!overlay || !sheet) return;
 
   renderExpenseSheet();
-
   overlay.classList.remove('hidden');
   sheet.classList.remove('translate-y-full');
   sheet.classList.add('translate-y-0');
+  overlay.onclick = closeExpenseSheet;
 }
-
 function closeExpenseSheet() {
-  activeEditExpenseId = null;
-
   const overlay = document.getElementById('sheetOverlay');
   const sheet = document.getElementById('expenseSheet');
   if (!overlay || !sheet) return;
@@ -872,8 +844,8 @@ function closeExpenseSheet() {
   sheet.classList.remove('translate-y-0');
   sheet.classList.add('translate-y-full');
   setTimeout(() => overlay.classList.add('hidden'), 180);
+  activeEditExpenseId = null;
 }
-
 function renderExpenseSheet() {
   const exp = state.expenses.find(e => e.id === activeEditExpenseId);
   if (!exp) return;
@@ -885,6 +857,7 @@ function renderExpenseSheet() {
 
   if (titleEl) titleEl.value = exp.title || '';
   if (amountEl) amountEl.value = exp.amount ?? '';
+
   if (payerEl) {
     payerEl.innerHTML = state.members
       .map(m => `<option value="${m.id}" ${m.id === exp.payerId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`)
@@ -906,17 +879,17 @@ function renderExpenseSheet() {
 
           <div class="flex items-center gap-2">
             <button class="w-10 h-10 rounded-2xl font-black border transition-all ${on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-400 border-slate-200'}"
-              onclick="sheetToggle01('${exp.id}','${m.id}')">${on ? '1' : '0'}</button>
+              onclick="toggleWeight01('${exp.id}','${m.id}')">${on ? '1' : '0'}</button>
 
             <div class="flex items-center bg-white border border-slate-200 rounded-2xl overflow-hidden">
               <button class="w-10 h-10 text-slate-600 font-black hover:bg-slate-50"
-                onclick="sheetStepWeight('${exp.id}','${m.id}',-0.1)">−</button>
+                onclick="stepWeight('${exp.id}','${m.id}',-0.1)">−</button>
               <input class="w-20 h-10 text-center font-black outline-none"
                 inputmode="decimal"
                 value="${String(w)}"
-                onchange="sheetSetWeight('${exp.id}','${m.id}', this.value)" />
+                onchange="setWeight('${exp.id}','${m.id}', this.value)" />
               <button class="w-10 h-10 text-slate-600 font-black hover:bg-slate-50"
-                onclick="sheetStepWeight('${exp.id}','${m.id}',0.1)">＋</button>
+                onclick="stepWeight('${exp.id}','${m.id}',0.1)">＋</button>
             </div>
           </div>
         </div>
@@ -945,18 +918,6 @@ function sheetUpdatePayer(v) {
   exp.payerId = v;
   calculateAndRender(false);
 }
-function sheetToggle01(eid, mid) {
-  toggleWeight01(eid, mid);
-  renderExpenseSheet();
-}
-function sheetSetWeight(eid, mid, val) {
-  setWeight(eid, mid, val);
-  renderExpenseSheet();
-}
-function sheetStepWeight(eid, mid, delta) {
-  stepWeight(eid, mid, delta);
-  renderExpenseSheet();
-}
 
 /* ===================== Share URL ===================== */
 function copyShareLink() {
@@ -977,11 +938,14 @@ function copyShareLink() {
 /* ===================== Sync modal ===================== */
 function openSyncModal() {
   document.getElementById('gasUrlInput').value = syncSettings.url || '';
-  document.getElementById('syncModal').classList.remove('hidden');
-  document.getElementById('syncModal').classList.add('flex');
+  const m = document.getElementById('syncModal');
+  m.classList.remove('hidden');
+  m.classList.add('flex');
 }
 function closeSyncModal() {
-  document.getElementById('syncModal').classList.add('hidden');
+  const m = document.getElementById('syncModal');
+  m.classList.add('hidden');
+  m.classList.remove('flex');
 }
 async function saveSyncSettings() {
   const url = document.getElementById('gasUrlInput').value.trim();
@@ -990,10 +954,9 @@ async function saveSyncSettings() {
   closeSyncModal();
 
   if (url) {
-    // 最新取得を試みる（なければそのまま新規）
     const ok = await fetchFromCloud();
     render();
-    triggerAutoSync(); // 今の状態を保存して shareUrl もスプシに記録させる想定
+    triggerAutoSync();
     toast(ok ? 'スプシから復元したよ' : '同期設定OK！この旅を保存するよ');
   } else {
     updateSyncUI('idle');
@@ -1002,271 +965,37 @@ async function saveSyncSettings() {
 
 /* ===================== Init ===================== */
 window.addEventListener('load', async () => {
-  // pid
   const pid = getPidFromUrl();
-  if (pid) {
-    state.projectId = pid;
-  } else {
+  if (pid) state.projectId = pid;
+  else {
     state.projectId = generatePid();
     setPidToUrl(state.projectId);
   }
 
-  // view tab
   state.viewTab = localStorage.getItem('warikan_view_tab') || 'card';
 
-  // title input
   const titleInput = document.getElementById('projectTitle');
   if (titleInput) {
     titleInput.value = state.title || '';
     titleInput.addEventListener('input', (e) => {
       state.title = e.target.value;
-      updateProjectNameUI();
+      updateHeaderUI();
       triggerAutoSync();
     });
   }
 
-  // 初期UI
-  updateProjectNameUI();
-  renderTabs();      // タブの見た目反映
   updateSyncUI('idle');
 
-  // GAS URL が設定済みならクラウドから復元を試す
   if (syncSettings.url) {
     const ok = await fetchFromCloud();
     render();
     toast(ok ? 'スプシから復元したよ' : '同期ON：この旅を保存するよ');
-    triggerAutoSync(); // shareUrl / payload を記録
+    triggerAutoSync();
   } else {
     render();
   }
 });
+</script>
 
-/* ===================== Tabs ===================== */
-function setViewTab(tab) {
-  state.viewTab = tab; // 'card' | 'table'
-  localStorage.setItem('warikan_view_tab', tab);
-  renderTabs();
-}
-
-function renderTabs() {
-  const tabCard = document.getElementById('tabCard');
-  const tabTable = document.getElementById('tabTable');
-  const panelCard = document.getElementById('panelCard');
-  const panelTable = document.getElementById('panelTable');
-
-  const isCard = (state.viewTab || 'card') === 'card';
-
-  if (tabCard) tabCard.className = tabBtnClass_(isCard);
-  if (tabTable) tabTable.className = tabBtnClass_(!isCard);
-
-  if (panelCard) panelCard.classList.toggle('hidden', !isCard);
-  if (panelTable) panelTable.classList.toggle('hidden', isCard);
-}
-
-function tabBtnClass_(active) {
-  return [
-    'flex-1 py-2 rounded-2xl text-sm font-black transition-all',
-    active ? 'bg-indigo-600 text-white shadow' : 'bg-slate-100 text-slate-600'
-  ].join(' ');
-}
-
-/* ===================== Bottom Sheet (table row tap) ===================== */
-let activeEditExpenseId = null;
-
-function openExpenseSheet(expenseId) {
-  activeEditExpenseId = expenseId;
-
-  const overlay = document.getElementById('sheetOverlay');
-  const sheet = document.getElementById('expenseSheet');
-  if (!overlay || !sheet) return;
-
-  renderExpenseSheet();
-
-  overlay.classList.remove('hidden');
-  sheet.classList.remove('translate-y-full');
-  sheet.classList.add('translate-y-0');
-
-  // overlay tap to close
-  overlay.onclick = closeExpenseSheet;
-}
-
-function closeExpenseSheet() {
-  const overlay = document.getElementById('sheetOverlay');
-  const sheet = document.getElementById('expenseSheet');
-  if (!overlay || !sheet) return;
-
-  sheet.classList.remove('translate-y-0');
-  sheet.classList.add('translate-y-full');
-
-  // hide overlay after animation
-  setTimeout(() => overlay.classList.add('hidden'), 180);
-
-  activeEditExpenseId = null;
-}
-
-function renderExpenseSheet() {
-  const exp = state.expenses.find(e => e.id === activeEditExpenseId);
-  if (!exp) return;
-
-  const titleEl = document.getElementById('sheetExpenseTitle');
-  const amountEl = document.getElementById('sheetExpenseAmount');
-  const payerEl = document.getElementById('sheetExpensePayer');
-  const weightsEl = document.getElementById('sheetWeights');
-
-  if (titleEl) titleEl.value = exp.title || '';
-  if (amountEl) amountEl.value = exp.amount ?? '';
-
-  if (payerEl) {
-    payerEl.innerHTML = state.members
-      .map(m => `<option value="${m.id}" ${m.id === exp.payerId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`)
-      .join('');
-  }
-
-  if (weightsEl) {
-    weightsEl.innerHTML = state.members.map(m => {
-      const w = Number(exp.weights?.[m.id] ?? 1);
-      const isOn = w > 0;
-
-      return `
-        <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2">
-          <div class="flex items-center gap-2 min-w-0">
-            <div class="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[11px] font-black text-slate-600">
-              ${escapeHtml(m.name.slice(0,1))}
-            </div>
-            <div class="font-bold truncate">${escapeHtml(m.name)}</div>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <button class="w-10 h-10 rounded-2xl font-black border transition-all ${
-              isOn ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-400 border-slate-200'
-            }" onclick="sheetToggle01('${exp.id}','${m.id}')">
-              ${isOn ? '1' : '0'}
-            </button>
-
-            <div class="flex items-center bg-white border border-slate-200 rounded-2xl overflow-hidden">
-              <button class="w-10 h-10 text-slate-600 font-black hover:bg-slate-50"
-                onclick="sheetStepWeight('${exp.id}','${m.id}',-0.1)">−</button>
-              <input class="w-20 h-10 text-center font-black outline-none"
-                inputmode="decimal"
-                value="${String(w)}"
-                onchange="sheetSetWeight('${exp.id}','${m.id}', this.value)" />
-              <button class="w-10 h-10 text-slate-600 font-black hover:bg-slate-50"
-                onclick="sheetStepWeight('${exp.id}','${m.id}',0.1)">＋</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  try { lucide.createIcons(); } catch(e) {}
-}
-
-/* ---- sheet field bindings ---- */
-function sheetUpdateTitle(v) {
-  const exp = state.expenses.find(e => e.id === activeEditExpenseId);
-  if (!exp) return;
-  exp.title = v;
-  calculate();
-  triggerAutoSync();
-}
-
-function sheetUpdateAmount(v) {
-  const exp = state.expenses.find(e => e.id === activeEditExpenseId);
-  if (!exp) return;
-  exp.amount = parseFloat(v) || 0;
-  calculate();
-  triggerAutoSync();
-}
-
-function sheetUpdatePayer(v) {
-  const exp = state.expenses.find(e => e.id === activeEditExpenseId);
-  if (!exp) return;
-  exp.payerId = v;
-  calculate();
-  triggerAutoSync();
-}
-
-function sheetToggle01(eid, mid) {
-  const exp = state.expenses.find(e => e.id === eid);
-  if (!exp) return;
-  const cur = Number(exp.weights?.[mid] ?? 0);
-  exp.weights[mid] = cur > 0 ? 0 : 1;
-  calculate();
-  renderExpenseSheet();
-  triggerAutoSync();
-}
-
-function sheetSetWeight(eid, mid, val) {
-  const exp = state.expenses.find(e => e.id === eid);
-  if (!exp) return;
-  let n = Number(val);
-  if (!Number.isFinite(n)) n = 0;
-  if (n < 0) n = 0;
-  exp.weights[mid] = n;
-  calculate();
-  renderExpenseSheet();
-  triggerAutoSync();
-}
-
-function sheetStepWeight(eid, mid, delta) {
-  const exp = state.expenses.find(e => e.id === eid);
-  if (!exp) return;
-  const cur = Number(exp.weights?.[mid] ?? 0);
-  let next = Math.round((cur + delta) * 10) / 10;
-  if (next < 0) next = 0;
-  exp.weights[mid] = next;
-  calculate();
-  renderExpenseSheet();
-  triggerAutoSync();
-}
-
-/* ===================== Share URL ===================== */
-function copyShareLink() {
-  const url = new URL(window.location.href);
-  url.searchParams.set('pid', state.projectId);
-
-  const text = url.toString();
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(text)
-      .then(() => toast('URLをコピーしたよ！'))
-      .catch(() => fallbackCopy(text));
-  } else {
-    fallbackCopy(text);
-  }
-}
-
-function fallbackCopy(text) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  document.body.appendChild(ta);
-  ta.select();
-  document.execCommand('copy');
-  document.body.removeChild(ta);
-  toast('URLをコピーしたよ！');
-}
-
-/* ===================== Toast ===================== */
-let toastTimer = null;
-function toast(msg) {
-  const t = document.getElementById('toast');
-  if (!t) return;
-  t.innerText = msg;
-
-  t.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
-  t.classList.add('opacity-100', 'translate-y-0');
-
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    t.classList.remove('opacity-100', 'translate-y-0');
-    t.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
-  }, 1600);
-}
-
-/* ===================== Small helpers (safe) ===================== */
-function updateProjectNameUI() {
-  const el = document.getElementById('currentProjectName');
-  if (el) el.innerText = state.title || '（未設定）';
-}
-
-/* ===================== END ===================== */
+</body>
+</html>
