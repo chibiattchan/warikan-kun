@@ -32,33 +32,28 @@
             transform: translateY(100%);
         }
 
-        @media (min-width: 640px) {
-            .bottom-sheet {
-                bottom: auto;
-                top: 50%;
-                left: 50%;
-                width: 90%;
-                max-width: 500px;
-                transform: translate(-50%, -40%) scale(0.95);
-                opacity: 0;
-                border-radius: 2rem !important;
-                transition: all 0.2s ease-out;
-            }
-            .bottom-sheet.active {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 1;
-            }
-            }
 
-/* ✅ “translateY(0)” はスマホ幅だけに限定する */
+
+//* 共通：PC では常に表示される */
+@media (min-width: 640px) {
+  .bottom-sheet {
+    transform: translateY(0);
+  }
+}
+
+/* スマホだけアニメーション */
 @media (max-width: 639px) {
+  .bottom-sheet {
+    transform: translateY(100%);
+  }
   .bottom-sheet.active {
     transform: translateY(0);
   }
 }
 
 
-        .bottom-sheet.active { transform: translateY(0); }
+
+  
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 pb-32">
