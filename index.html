@@ -258,6 +258,22 @@
 
             listContainer.innerHTML = '';
             tableBody.innerHTML = '';
+                        const headerRow = document.getElementById('listHeaderRow');
+                        headerRow.innerHTML = `
+                <th class="p-4 text-left font-bold text-slate-400 text-[10px] uppercase">項目</th>
+                <th class="p-4 text-right font-bold text-slate-400 text-[10px] uppercase">金額</th>
+                <th class="p-4 text-left font-bold text-slate-400 text-[10px] uppercase">支払</th>
+
+                ${state.members.map(m => `
+                    <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase border-l border-slate-100 min-w-[90px]">
+                    ${escapeHtml(m.name)}
+                    </th>
+                `).join('')}
+
+                <th class="p-4 text-center font-bold text-slate-400 text-[10px] uppercase">詳細</th>
+                `;
+
+
 
             if (state.expenses.length === 0) {
                 listContainer.innerHTML = `
