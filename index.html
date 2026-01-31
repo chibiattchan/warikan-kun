@@ -569,100 +569,191 @@
 
         // --- Details Modal ---
         /* --- replace openExpenseModal / closeExpenseModal implementations --- */
-   // --- Details Modal: 実際のフォームを生成して保存する実装 ---
-   function openExpenseModal(id) {
-    const exp = state.expenses.find(e => e.id === id); if (!exp) return;
-    const content = document.getElementById('modalContent');
 
-    content.innerHTML = `
-      <div class="space-y-6">
-        <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">項目名</label>
-          <input id="modal_title" type="text" value="${escapeHtml(exp.title || '')}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none" />
-        </div>
+            // openExpenseModal と weight 更新のヘルパーを差し替える（既存の同名関数と置き換えてください）
+            function openExpenseModal(id) {
+                const exp = state.expenses.find(e => e.id === id); if (!exp) return;
+                const content = document.getElementById('modalContent');
 
-        <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">金額</label>
-          <input id="modal_amount" type="number" inputmode="numeric" min="0" step="1" value="${Number(exp.amount || 0)}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-black text-right outline-none" />
-        </div>
+                content.innerHTML = `
+                <div class="space-y-6">
+                    <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">項目名</label>
+                    <input id="modal_title" type="text" value="${escapeHtml(exp.title || '')}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none" />
+                    </div>
 
-        <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">支払者</label>
-          <select id="modal_payer" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none">
-            ${state.members.map(m => `<option value="${m.id}" ${m.id === exp.payerId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
-          </select>
-        </div>
+                    <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">金額</label>
+                    <input id="modal_amount" type="number" inputmode="numeric" min="0" step="0.1" value="${Number(exp.amount || 0)}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-black text-right outline-none" />
+                    </div>
 
-        <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">分配（Weight）</label>
-          <div id="modal_weights" class="space-y-2">
-            ${state.members.map(m => `
-              <div class="flex items-center justify-between gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <div class="font-bold text-slate-800">${escapeHtml(m.name)}</div>
-                <input data-memberid="${m.id}" type="number" inputmode="numeric" min="0" step="0.1" value="${Number(exp.weights?.[m.id] ?? 0)}" class="inline-edit-input w-28 text-right" />
-              </div>
-            `).join('')}
-          </div>
-        </div>
+                    <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">支払者</label>
+                    <select id="modal_payer" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none">
+                        ${state.members.map(m => `<option value="${m.id}" ${m.id === exp.payerId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+                    </select>
+                    </div>
 
-        <div class="flex gap-3">
-          <button id="modal_save" class="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold">保存</button>
-          <button id="modal_cancel" class="flex-1 bg-slate-100 py-3 rounded-2xl font-bold">キャンセル</button>
-        </div>
-      </div>
-    `;
+                    <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">分配（Weight）</label>
+                    <div id="modal_weights" class="space-y-2">
+                        ${state.members.map(m => {
+                        const val = Number(exp.weights?.[m.id] ?? 0);
+                        const onClass = val >= 0.95 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600';
+                        const offClass = val <= 0.05 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600';
+                        return `
+                            <div class="flex items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <div class="font-bold text-slate-800">${escapeHtml(m.name)}</div>
+                            <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-1">
+                                <button type="button" class="weight-toggle-off px-3 py-1 rounded-full ${offClass}" data-memberid="${m.id}" aria-pressed="${val<=0.05}">OFF</button>
+                                <button type="button" class="weight-toggle-on px-3 py-1 rounded-full ${onClass}" data-memberid="${m.id}" aria-pressed="${val>=0.95}">ON</button>
+                                </div>
+                                <div class="flex items-center gap-1 bg-white rounded-md p-1 border border-slate-100">
+                                <button type="button" class="weight-dec px-2 py-1 rounded text-slate-600 bg-slate-100" data-memberid="${m.id}">−</button>
+                                <input data-memberid="${m.id}" class="weight-input w-20 text-right bg-transparent outline-none text-sm font-bold" type="number" step="0.1" min="0" value="${val.toFixed(1)}" />
+                                <button type="button" class="weight-inc px-2 py-1 rounded text-slate-600 bg-slate-100" data-memberid="${m.id}">+</button>
+                                </div>
+                            </div>
+                            </div>
+                        `;
+                        }).join('')}
+                    </div>
+                    </div>
 
-    // 表示制御（親の hidden を外し、bottom-sheet を active に）
-    const m = document.getElementById('expenseModal');
-    m.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-    const sheet = m.querySelector('.bottom-sheet');
-    sheet.classList.remove('active');
-    // 少し待ってアニメーションを開始
-    setTimeout(() => sheet.classList.add('active'), 20);
+                    <div class="flex gap-3">
+                    <button id="modal_save" class="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold">保存</button>
+                    <button id="modal_cancel" class="flex-1 bg-slate-100 py-3 rounded-2xl font-bold">キャンセル</button>
+                    </div>
+                </div>
+                `;
 
-    // イベントバインド
-    document.getElementById('modal_save').onclick = () => {
-      const title = document.getElementById('modal_title').value.trim();
-      const amount = parseFloat(document.getElementById('modal_amount').value) || 0;
-      const payerId = document.getElementById('modal_payer').value;
+                // 表示制御（親の hidden を外し、bottom-sheet を active）
+                const mEl = document.getElementById('expenseModal');
+                mEl.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                const sheet = mEl.querySelector('.bottom-sheet');
+                sheet.classList.remove('active');
+                setTimeout(() => sheet.classList.add('active'), 20);
 
-      // weights
-      const weightInputs = document.querySelectorAll('#modal_weights input[data-memberid]');
-      weightInputs.forEach(inp => {
-        const mid = inp.dataset.memberid;
-        const val = parseFloat(inp.value);
-        exp.weights[mid] = Math.max(0, isNaN(val) ? 0 : val);
-      });
+                // --- イベントバインド（ON/OFF, +/-, input） ---
+                // helper to update weight in state (round to 0.1)
+                function setWeightAndRefresh(memberId, rawValue) {
+                const v = Math.round(Math.max(0, rawValue) * 10) / 10;
+                exp.weights = exp.weights || {};
+                exp.weights[memberId] = v;
+                // reflect immediately to app state and UI
+                render();        // update dashboard / tables
+                triggerAutoSave();
+                // update modal controls to reflect current value
+                refreshWeightControls(memberId, v);
+                }
 
-      exp.title = title;
-      exp.amount = amount;
-      exp.payerId = payerId;
+                // refresh single member's controls (toggle colors and input value)
+                function refreshWeightControls(memberId, value) {
+                const input = document.querySelector(`#modal_weights input.weight-input[data-memberid="${memberId}"]`);
+                if (input) input.value = value.toFixed(1);
+                const onBtn = document.querySelector(`#modal_weights .weight-toggle-on[data-memberid="${memberId}"]`);
+                const offBtn = document.querySelector(`#modal_weights .weight-toggle-off[data-memberid="${memberId}"]`);
+                if (onBtn) {
+                    if (value >= 0.95) { onBtn.classList.add('bg-indigo-600','text-white'); onBtn.classList.remove('bg-slate-100','text-slate-600'); onBtn.setAttribute('aria-pressed','true'); }
+                    else { onBtn.classList.remove('bg-indigo-600','text-white'); onBtn.classList.add('bg-slate-100','text-slate-600'); onBtn.setAttribute('aria-pressed','false'); }
+                }
+                if (offBtn) {
+                    if (value <= 0.05) { offBtn.classList.add('bg-indigo-600','text-white'); offBtn.classList.remove('bg-slate-100','text-slate-600'); offBtn.setAttribute('aria-pressed','true'); }
+                    else { offBtn.classList.remove('bg-indigo-600','text-white'); offBtn.classList.add('bg-slate-100','text-slate-600'); offBtn.setAttribute('aria-pressed','false'); }
+                }
+                }
 
-      render();
-      triggerAutoSave();
-      closeExpenseModal();
-    };
+                // toggle ON/OFF handlers
+                document.querySelectorAll('#modal_weights .weight-toggle-on').forEach(btn => {
+                btn.addEventListener('click', (ev) => {
+                    const mid = btn.dataset.memberid;
+                    setWeightAndRefresh(mid, 1);
+                });
+                });
+                document.querySelectorAll('#modal_weights .weight-toggle-off').forEach(btn => {
+                btn.addEventListener('click', (ev) => {
+                    const mid = btn.dataset.memberid;
+                    setWeightAndRefresh(mid, 0);
+                });
+                });
 
-    document.getElementById('modal_cancel').onclick = () => {
-      // キャンセル時は新規作成で中身が空のまま来た場合は削除する選択肢は設けてもよいが今は閉じるだけ
-      closeExpenseModal();
-    };
+                // increment / decrement handlers
+                document.querySelectorAll('#modal_weights .weight-inc').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const mid = btn.dataset.memberid;
+                    const cur = parseFloat(document.querySelector(`#modal_weights input.weight-input[data-memberid="${mid}"]`).value) || 0;
+                    setWeightAndRefresh(mid, cur + 0.1);
+                });
+                });
+                document.querySelectorAll('#modal_weights .weight-dec').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const mid = btn.dataset.memberid;
+                    const cur = parseFloat(document.querySelector(`#modal_weights input.weight-input[data-memberid="${mid}"]`).value) || 0;
+                    setWeightAndRefresh(mid, Math.max(0, cur - 0.1));
+                });
+                });
 
-    // フォーカスを項目名へ
-    setTimeout(() => {
-      const t = document.getElementById('modal_title');
-      if (t) t.focus();
-    }, 60);
+                // direct input handler: update on input (live)
+                document.querySelectorAll('#modal_weights input.weight-input').forEach(inp => {
+                inp.addEventListener('input', (e) => {
+                    const mid = inp.dataset.memberid;
+                    // accept decimal with one decimal place; don't auto-round until blur to keep typing smooth
+                    let val = parseFloat(inp.value);
+                    if (isNaN(val)) val = 0;
+                    // live update state but round to 1 decimal for consistency
+                    setWeightAndRefresh(mid, val);
+                });
+                // optional: on blur ensure formatting
+                inp.addEventListener('blur', () => {
+                    const mid = inp.dataset.memberid;
+                    const v = parseFloat(inp.value);
+                    setWeightAndRefresh(mid, isNaN(v) ? 0 : v);
+                });
+                });
 
-    lucide.createIcons();
-  }
+                // 保存 / キャンセル
+                document.getElementById('modal_save').onclick = () => {
+                const title = document.getElementById('modal_title').value.trim();
+                const amount = parseFloat(document.getElementById('modal_amount').value) || 0;
+                const payerId = document.getElementById('modal_payer').value;
 
-  function closeExpenseModal() {
-    const m = document.getElementById('expenseModal');
-    if (!m) return;
-    const sheet = m.querySelector('.bottom-sheet');
-    if (sheet) sheet.classList.remove('active');
+                exp.title = title;
+                exp.amount = amount;
+                exp.payerId = payerId;
+
+                render();
+                triggerAutoSave();
+                closeExpenseModal();
+                };
+
+                document.getElementById('modal_cancel').onclick = () => {
+                closeExpenseModal();
+                };
+
+                // 初期トグル状態の同期（表示後）
+                state.members.forEach(m => {
+                const v = Number(exp.weights?.[m.id] ?? 0);
+                refreshWeightControls(m.id, v);
+                });
+
+                // フォーカスを項目名へ
+                setTimeout(() => { const t = document.getElementById('modal_title'); if (t) t.focus(); }, 60);
+
+                lucide.createIcons();
+            }
+
+            function closeExpenseModal() {
+                const m = document.getElementById('expenseModal');
+                if (!m) return;
+                const sheet = m.querySelector('.bottom-sheet');
+                if (sheet) sheet.classList.remove('active');
+                setTimeout(() => {
+                document.body.style.overflow = '';
+                m.classList.add('hidden');
+                }, 300);
+            }
 
     // トランジションの長さに合わせて hidden にする
     setTimeout(() => {
