@@ -301,6 +301,23 @@
         };
         
         function formatCurrency(n) { return '¥' + Math.round(n).toLocaleString(); }
+        // ページ上で onclick="switchTab('input')" のように呼ばれるのでグローバルで定義する
+        function switchTab(t) {
+        const viewInput = document.getElementById('view-input');
+        const viewList  = document.getElementById('view-list');
+        if (viewInput) viewInput.classList.toggle('hidden', t !== 'input');
+        if (viewList)  viewList.classList.toggle('hidden', t !== 'list');
+
+        const bI = document.getElementById('tab-input');
+        const bL = document.getElementById('tab-list');
+        const active = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-200";
+        const inactive = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50";
+        if (bI) bI.className = t === 'input' ? active : inactive;
+        if (bL) bL.className = t === 'list' ? active : inactive;
+
+        // keep UI in sync
+        if (typeof render === 'function') render();
+        }
         function escapeHtml(s) { return s ? s.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) : ''; }
         
         function calculate() {
