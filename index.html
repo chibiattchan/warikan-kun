@@ -14,46 +14,71 @@
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: none;
         }
-
+    
         .no-scrollbar::-webkit-scrollbar { display: none; }
-
+    
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
-
+    
         .inline-edit-input {
             @apply w-full bg-indigo-50 border-2 border-indigo-400 rounded px-1 font-bold text-slate-900 outline-none;
         }
-
+    
+        /* 共通：モーダル（bottom-sheet）の基本 */
         .bottom-sheet {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease;
             transform: translateY(100%);
+            opacity: 0;
+            will-change: transform, opacity;
+            /* 保険で固定レイアウトにしておく（子要素側の位置指定に依存） */
+            position: fixed;
+            left: 0;
+            right: 0;
         }
-
-
-
-//* 共通：PC では常に表示される */
-@media (min-width: 640px) {
-  .bottom-sheet {
-    transform: translateY(0);
-  }
-}
-
-/* スマホだけアニメーション */
-@media (max-width: 639px) {
-  .bottom-sheet {
-    transform: translateY(100%);
-  }
-  .bottom-sheet.active {
-    transform: translateY(0);
-  }
-}
-
-
-
-  
+    
+        /* PC（>=640px）：中央表示にする */
+        @media (min-width: 640px) {
+            .bottom-sheet {
+                /* 中央に置く */
+                left: 50%;
+                top: 50%;
+                right: auto;
+                bottom: auto;
+                width: min(720px, calc(100% - 48px));
+                transform: translate(-50%, -50%);
+                opacity: 1; /* デフォルトで visible に（親の hidden で隠れる） */
+                border-radius: 1.25rem;
+                max-height: 90vh;
+                overflow: auto;
+                padding: 1.5rem;
+            }
+            /* active は微妙なポップアニメにしておく（任意） */
+            .bottom-sheet.active {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+    
+        /* スマホ（<=639px）：下からスライドアップ */
+        @media (max-width: 639px) {
+            .bottom-sheet {
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100%;
+                border-top-left-radius: 1.25rem;
+                border-top-right-radius: 1.25rem;
+                max-height: 92vh;
+                overflow-y: auto;
+            }
+            .bottom-sheet.active {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 pb-32">
