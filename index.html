@@ -6,7 +6,7 @@
     <title>わりかん君 Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.css">
-    v8<style>
+    v13<style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
       
         body {
@@ -257,599 +257,569 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
+        <script>
         let state = { projectId: '', title: '新しい旅行', members: [], expenses: [] };
         let gasUrl = localStorage.getItem('fair_share_gas_url_v3') || '';
         let editingExpenseId = null;
-
+        let autoSaveTimer = null;
+        
         window.onload = () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            let pid = urlParams.get('pid') || localStorage.getItem('fs_last_pid') || 'p_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('fs_last_pid', pid);
-            state.projectId = pid;
-            document.getElementById('projectIdDisplay').innerText = `ID: ${pid}`;
-            document.getElementById('gasUrlInput').value = gasUrl;
-            
-            const cached = localStorage.getItem('fs_cache_' + pid);
-            if (cached) try { state = JSON.parse(cached); } catch(e) {}
-            
-            render();
-            if (gasUrl) fetchData();
-            
-            document.getElementById('projectTitle').addEventListener('input', (e) => {
-                state.title = e.target.value;
-                triggerAutoSave();
+        const urlParams = new URLSearchParams(window.location.search);
+        let pid = urlParams.get('pid') || localStorage.getItem('fs_last_pid') || 'p_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('fs_last_pid', pid);
+        state.projectId = pid;
+        const pidEl = document.getElementById('projectIdDisplay');
+        if (pidEl) pidEl.innerText = `ID: ${pid}`;
+        const gasInput = document.getElementById('gasUrlInput');
+        if (gasInput) gasInput.value = gasUrl;
+        
+        const cached = localStorage.getItem('fs_cache_' + pid);
+        if (cached) try { state = JSON.parse(cached); } catch (e) {}
+        
+        // Project title change handler
+        const titleInput = document.getElementById('projectTitle');
+        if (titleInput) {
+            titleInput.value = state.title || '新しい旅行';
+            titleInput.addEventListener('input', (e) => {
+            state.title = e.target.value;
+            triggerAutoSave();
             });
-        };
-
-        function render() {
-            const calculation = calculate();
-            document.getElementById('totalAmount').innerText = formatCurrency(calculation.total);
-            document.getElementById('memberCount').innerText = `${state.members.length}人`;
-            
-            // Dashboard Recently Added
-            const recentContainer = document.getElementById('recentExpensesList');
-            recentContainer.innerHTML = '';
-            if (state.members.length > 0) {
-                state.expenses.slice(0, 5).forEach(exp => {
-                    const payer = state.members.find(m => m.id === exp.payerId)?.name || '削除済';
-                    const div = document.createElement('div');
-                    div.className = "w-full bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between shadow-sm cursor-pointer active:scale-95 transition-all";
-                    div.onclick = () => openExpenseModal(exp.id);
-                    div.innerHTML = `<div class="overflow-hidden pr-2"><div class="font-bold text-slate-800 truncate">${escapeHtml(exp.title || '無題')}</div><div class="text-[10px] text-slate-400 mt-1 font-black uppercase tracking-widest"><span class="text-indigo-500">${escapeHtml(payer)}</span> 支払</div></div><div class="text-lg font-black italic text-slate-800">${formatCurrency(exp.amount)}</div>`;
-                    recentContainer.appendChild(div);
-                });
-            } else {
-                recentContainer.innerHTML = `<div class="bg-white rounded-3xl p-10 border-2 border-dashed border-slate-200 text-center text-slate-400 font-bold">メンバーを追加してください</div>`;
+        }
+        
+        // Global: select all text when input (text/number) receives focus
+        document.addEventListener('focusin', (ev) => {
+            const t = ev.target;
+            if (!t) return;
+            if (t.tagName === 'INPUT' && (t.type === 'text' || t.type === 'number')) {
+            // next tick helps on mobile to avoid caret jump
+            setTimeout(() => { try { t.select(); } catch (e) {} }, 0);
             }
-
-            // Full Table Rendering
-            const headRow = document.getElementById('fullTableHeadRow');
-            const tableBody = document.getElementById('fullExpensesTable');
-            
+        });
+        
+        render();
+        if (gasUrl) fetchData().catch(()=>{});
+        };
+        
+        function formatCurrency(n) { return '¥' + Math.round(n).toLocaleString(); }
+        function escapeHtml(s) { return s ? s.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) : ''; }
+        
+        function calculate() {
+        const balances = {};
+        state.members.forEach(m => balances[m.id] = { paid: 0, should: 0, diff: 0 });
+        
+        let total = 0;
+        state.expenses.forEach(exp => {
+            const amt = parseFloat(exp.amount) || 0;
+            total += amt;
+            if (balances[exp.payerId]) balances[exp.payerId].paid += amt;
+        
+            let totalWeight = 0;
+            state.members.forEach(m => totalWeight += (parseFloat(exp.weights?.[m.id]) || 0));
+            if (totalWeight > 0) {
+            const perWeight = amt / totalWeight;
+            state.members.forEach(m => {
+                const w = parseFloat(exp.weights?.[m.id]) || 0;
+                balances[m.id].should += w * perWeight;
+            });
+            }
+        });
+        
+        Object.keys(balances).forEach(id => balances[id].diff = balances[id].paid - balances[id].should);
+        
+        const d = [], c = [];
+        Object.entries(balances).forEach(([id,b]) => {
+            const name = (state.members.find(m => m.id === id) || {}).name || '不明';
+            if (b.diff < -0.1) d.push({ id, amt: b.diff, name });
+            else if (b.diff > 0.1) c.push({ id, amt: b.diff, name });
+        });
+        
+        const plan = [];
+        let i = 0, j = 0;
+        const dCopy = JSON.parse(JSON.stringify(d));
+        const cCopy = JSON.parse(JSON.stringify(c));
+        while (i < dCopy.length && j < cCopy.length) {
+            const s = Math.min(Math.abs(dCopy[i].amt), cCopy[j].amt);
+            if (s > 0.1) plan.push({ fromName: dCopy[i].name, toName: cCopy[j].name, amount: s });
+            dCopy[i].amt += s;
+            cCopy[j].amt -= s;
+            if (Math.abs(dCopy[i].amt) < 0.1) i++;
+            if (cCopy[j].amt < 0.1) j++;
+        }
+        
+        return { total, plan, balances };
+        }
+        
+        function render() {
+        const calculation = calculate();
+        const totalEl = document.getElementById('totalAmount');
+        if (totalEl) totalEl.innerText = formatCurrency(calculation.total);
+        const memberCountEl = document.getElementById('memberCount');
+        if (memberCountEl) memberCountEl.innerText = `${state.members.length}人`;
+        
+        // Recent
+        const recentContainer = document.getElementById('recentExpensesList');
+        if (recentContainer) {
+            recentContainer.innerHTML = '';
+            if (state.members.length === 0) {
+            recentContainer.innerHTML = `<div class="bg-white rounded-3xl p-10 border-2 border-dashed border-slate-200 text-center text-slate-400 font-bold">メンバーを追加してください</div>`;
+            } else {
+            state.expenses.slice(0,5).forEach(exp => {
+                const payer = (state.members.find(m => m.id === exp.payerId) || {}).name || '削除済';
+                const div = document.createElement('div');
+                div.className = "w-full bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between shadow-sm cursor-pointer active:scale-95 transition-all";
+                div.onclick = () => openExpenseModal(exp.id);
+                div.innerHTML = `<div class="overflow-hidden pr-2"><div class="font-bold text-slate-800 truncate">${escapeHtml(exp.title || '無題')}</div><div class="text-[10px] text-slate-400 mt-1 font-black uppercase tracking-widest"><span class="text-indigo-500">${escapeHtml(payer)}</span> 支払</div></div><div class="text-lg font-black italic text-slate-800">${formatCurrency(exp.amount)}</div>`;
+                recentContainer.appendChild(div);
+            });
+            }
+        }
+        
+        // Full table
+        const headRow = document.getElementById('fullTableHeadRow');
+        const tableBody = document.getElementById('fullExpensesTable');
+        if (headRow && tableBody) {
             headRow.innerHTML = `
-                <th class="p-4 text-left font-black text-slate-400 text-[10px] uppercase tracking-widest w-48">項目</th>
-                <th class="p-4 text-left font-black text-slate-400 text-[10px] uppercase tracking-widest w-32">支払者</th>
-                <th class="p-4 text-right font-black text-slate-400 text-[10px] uppercase tracking-widest w-32">金額</th>
-                ${state.members.map(m => `
-                    <th class="p-4 text-center font-black text-slate-400 text-[10px] uppercase tracking-widest border-l border-slate-100 min-w-[70px]">
-                        ${escapeHtml(m.name)}<br>(Weight)
-                    </th>
-                `).join('')}
-                <th class="p-4 text-center font-black text-slate-400 text-[10px] w-12"></th>
+            <th class="p-4 text-left font-black text-slate-400 text-[10px] uppercase tracking-widest w-48">項目</th>
+            <th class="p-4 text-left font-black text-slate-400 text-[10px] uppercase tracking-widest w-32">支払者</th>
+            <th class="p-4 text-right font-black text-slate-400 text-[10px] uppercase tracking-widest w-32">金額</th>
+            ${state.members.map(m => `<th class="p-4 text-center font-black text-slate-400 text-[10px] uppercase tracking-widest border-l border-slate-100 min-w-[70px]">${escapeHtml(m.name)}<br>(Weight)</th>`).join('')}
+            <th class="p-4 text-center font-black text-slate-400 text-[10px] w-12"></th>
             `;
-
             tableBody.innerHTML = '';
             state.expenses.forEach(exp => {
-                const tr = document.createElement('tr');
-                tr.className = "group hover:bg-slate-50 transition-colors";
-                
-                const tdTitle = createEditableTd(exp.title || '無題', (val) => updateExpData(exp.id, 'title', val), 'text');
-                const tdPayer = createSelectTd(exp.payerId, state.members, (val) => updateExpData(exp.id, 'payerId', val));
-                const tdAmount = createEditableTd(exp.amount, (val) => updateExpData(exp.id, 'amount', val), 'number', true);
-                
-                tr.appendChild(tdTitle);
-                tr.appendChild(tdPayer);
-                tr.appendChild(tdAmount);
-
-                state.members.forEach(m => {
-                    const weight = exp.weights[m.id] || 0;
-                    const tdWeight = createEditableTd(weight, (val) => {
-                        exp.weights[m.id] = Math.max(0, parseFloat(val) || 0);
-                        render();
-                        triggerAutoSave();
-                    }, 'number');
-                    tdWeight.className = `p-2 text-center border-l border-slate-50 font-black text-xs ${weight > 0 ? 'text-indigo-600 bg-indigo-50/30' : 'text-slate-300'}`;
-                    tr.appendChild(tdWeight);
-                });
-
-                const tdAction = document.createElement('td');
-                tdAction.className = "p-2 text-center";
-                tdAction.innerHTML = `<button onclick="deleteExpense('${exp.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i data-lucide="trash-2" size="14"></i></button>`;
-                tr.appendChild(tdAction);
-                tableBody.appendChild(tr);
+            const tr = document.createElement('tr');
+            tr.className = "group hover:bg-slate-50 transition-colors";
+            const tdTitle = createEditableTd(exp.title || '無題', (val) => updateExpData(exp.id, 'title', val), 'text');
+            const tdPayer = createSelectTd(exp.payerId, state.members, (v) => updateExpData(exp.id, 'payerId', v));
+            const tdAmount = createEditableTd(exp.amount, (val) => updateExpData(exp.id, 'amount', val), 'number', true);
+            tr.appendChild(tdTitle);
+            tr.appendChild(tdPayer);
+            tr.appendChild(tdAmount);
+            state.members.forEach(m => {
+                const weight = exp.weights?.[m.id] || 0;
+                const tdWeight = createEditableTd(weight, (val) => {
+                exp.weights = exp.weights || {};
+                exp.weights[m.id] = Math.max(0, parseFloat(val) || 0);
+                render();
+                triggerAutoSave();
+                }, 'number');
+                tdWeight.className = `p-2 text-center border-l border-slate-50 font-black text-xs ${weight > 0 ? 'text-indigo-600 bg-indigo-50/30' : 'text-slate-300'}`;
+                tr.appendChild(tdWeight);
             });
-
-            // Member Summary Table Rendering
-            const summaryBody = document.getElementById('memberSummaryTable');
+            const tdAction = document.createElement('td');
+            tdAction.className = "p-2 text-center";
+            tdAction.innerHTML = `<button onclick="deleteExpense('${exp.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i data-lucide="trash-2" size="14"></i></button>`;
+            tr.appendChild(tdAction);
+            tableBody.appendChild(tr);
+            });
+        }
+        
+        // Member summary
+        const summaryBody = document.getElementById('memberSummaryTable');
+        if (summaryBody) {
             summaryBody.innerHTML = '';
             state.members.forEach(m => {
-                const b = calculation.balances[m.id] || { paid: 0, should: 0, diff: 0 };
-                const tr = document.createElement('tr');
-                tr.className = "font-bold text-slate-700";
-                
+            const b = calculation.balances[m.id] || { paid: 0, should: 0, diff: 0 };
+            const balanceColor = b.diff > 0.1 ? 'text-indigo-600' : (b.diff < -0.1 ? 'text-rose-500' : 'text-slate-400');
+            const balanceIcon = b.diff > 0.1 ? '+' : '';
+            const tr = document.createElement('tr');
+            tr.className = "font-bold text-slate-700";
+            tr.innerHTML = `
+                <td class="p-4 font-black text-slate-800">${escapeHtml(m.name)}</td>
+                <td class="p-4 text-right">${formatCurrency(b.paid)}</td>
+                <td class="p-4 text-right text-slate-400 font-medium">${formatCurrency(b.should)}</td>
+                <td class="p-4 text-right font-black italic text-lg ${balanceColor}">${balanceIcon}${formatCurrency(b.diff)}</td>
+            `;
+            summaryBody.appendChild(tr);
+            });
+        }
+        
+        // Settlement plan
+        const planContainer = document.getElementById('settlementPlan');
+        if (planContainer) {
+            planContainer.innerHTML = '';
+            if (calculation.plan.length === 0) planContainer.innerHTML = '貸し借りは現在ありません';
+            else calculation.plan.forEach(p => {
+            const div = document.createElement('div');
+            div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100";
+            div.innerHTML = `<div class="text-left"><span class="text-[9px] block text-rose-400 font-bold uppercase mb-1">支払う</span><span class="font-bold">${escapeHtml(p.fromName)}</span></div><div class="text-right font-black">${formatCurrency(p.amount)} → ${escapeHtml(p.toName)}</div>`;
+            planContainer.appendChild(div);
+            });
+        }
+        
+        try { localStorage.setItem('fs_cache_' + state.projectId, JSON.stringify(state)); } catch (e) {}
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+        }
+        
+        /* Inline editing helpers */
+        function createEditableTd(value, onSave, type = 'text', isCurrency = false) {
+        const td = document.createElement('td');
+        td.className = "p-4 cursor-pointer hover:bg-indigo-50/50 transition-all font-bold text-slate-700";
+        if (type === 'number' && !isCurrency) td.className += " text-right";
+        if (isCurrency) td.className += " text-right font-black italic text-slate-800";
+        
+        const displayValue = isCurrency ? formatCurrency(value) : value;
+        td.innerText = displayValue;
+        
+        td.onclick = (e) => {
+            if (td.querySelector('input')) return;
+            const input = document.createElement('input');
+            // choose input type
+            input.type = (type === 'number' || isCurrency) ? 'number' : 'text';
+            input.value = value;
+            input.className = "inline-edit-input";
+            input.inputMode = (input.type === 'number') ? 'numeric' : input.inputMode;
+        
+            // step settings
+            if (isCurrency) input.step = "1000";
+            else if (type === 'number') input.step = "0.1";
+        
+            // ensure native spin controls available
+            input.style.webkitAppearance = 'auto';
+            input.style.appearance = 'auto';
+        
+            if (isCurrency || type === 'number') input.className += " text-right";
+        
+            td.innerText = '';
+            td.appendChild(input);
+        
+            // select-all on focus
+            input.onfocus = () => { try { input.select(); } catch (e) {} };
+            input.focus();
+        
+            const save = () => {
+            const newVal = input.value;
+            try { td.removeChild(input); } catch (e) {}
+            onSave(newVal);
+            };
+        
+            input.onblur = save;
+            input.onkeydown = (ev) => { if (ev.key === 'Enter') save(); };
+        };
+        return td;
+        }
+        
+        function createSelectTd(currentId, options, onSave) {
+        const td = document.createElement('td');
+        td.className = "p-4 cursor-pointer hover:bg-indigo-50/50 transition-all font-bold text-indigo-600";
+        const payer = options.find(o => o.id === currentId)?.name || '未選択';
+        td.innerText = payer;
+        
+        td.onclick = () => {
+            if (td.querySelector('select')) return;
+            const select = document.createElement('select');
+            select.className = "inline-edit-input py-0";
+            options.forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt.id;
+            o.innerText = opt.name;
+            o.selected = opt.id === currentId;
+            select.appendChild(o);
+            });
+        
+            td.innerText = '';
+            td.appendChild(select);
+            select.focus();
+        
+            const save = () => {
+            const newVal = select.value;
+            try { td.removeChild(select); } catch (e) {}
+            onSave(newVal);
+            };
+        
+            select.onblur = save;
+            select.onchange = save;
+        };
+        return td;
+        }
+        
+        /* CRUD & Modals */
+        function createNewExpense(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (state.members.length === 0) { addMember(e); return; }
+        const id = 'e_' + Math.random().toString(36).substr(2, 9);
+        const weights = {}; state.members.forEach(m => weights[m.id] = 1);
+        state.expenses.unshift({ id, title: '', amount: 0, payerId: state.members[0].id, weights });
+        render();
+        openExpenseModal(id);
+        }
+        
+        function deleteExpense(id) {
+        if (!confirm('この支出を削除しますか？')) return;
+        state.expenses = state.expenses.filter(e => e.id !== id);
+        render();
+        triggerAutoSave();
+        }
+        
+        /* Expense modal with Weight UI */
+        function openExpenseModal(id) {
+        const exp = state.expenses.find(e => e.id === id);
+        if (!exp) return;
+        const content = document.getElementById('modalContent');
+        
+        content.innerHTML = `
+            <div class="space-y-6">
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">項目名</label>
+                <input id="modal_title" type="text" value="${escapeHtml(exp.title || '')}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none" />
+            </div>
+        
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">金額</label>
+                <input id="modal_amount" type="number" inputmode="numeric" min="0" step="1000" value="${Number(exp.amount || 0)}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-black text-right outline-none" />
+            </div>
+        
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">支払者</label>
+                <select id="modal_payer" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none">
+                ${state.members.map(m => `<option value="${m.id}" ${m.id === exp.payerId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+                </select>
+            </div>
+        
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">分配（Weight）</label>
+                <div id="modal_weights" class="space-y-2">
+                ${state.members.map(m => {
+                    const val = Number(exp.weights?.[m.id] ?? 0);
+                    const onClass = val >= 0.95 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600';
+                    const offClass = val <= 0.05 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600';
+                    return `
+                    <div class="flex items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <div class="font-bold text-slate-800">${escapeHtml(m.name)}</div>
+                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1">
+                            <button type="button" class="weight-toggle-off px-3 py-1 rounded-full ${offClass}" data-memberid="${m.id}" aria-pressed="${val <= 0.05}">OFF</button>
+                            <button type="button" class="weight-toggle-on px-3 py-1 rounded-full ${onClass}" data-memberid="${m.id}" aria-pressed="${val >= 0.95}">ON</button>
+                        </div>
+                        <div class="flex items-center gap-1 bg-white rounded-md p-1 border border-slate-100">
+                            <button type="button" class="weight-dec px-2 py-1 rounded text-slate-600 bg-slate-100" data-memberid="${m.id}">−</button>
+                            <input data-memberid="${m.id}" class="weight-input w-20 text-right bg-transparent outline-none text-sm font-bold" type="number" step="0.1" min="0" value="${val.toFixed(1)}" />
+                            <button type="button" class="weight-inc px-2 py-1 rounded text-slate-600 bg-slate-100" data-memberid="${m.id}">+</button>
+                        </div>
+                        </div>
+                    </div>
+                    `;
+                }).join('')}
+                </div>
+            </div>
+        
+            <div class="flex gap-3">
+                <button id="modal_save" class="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold">保存</button>
+                <button id="modal_cancel" class="flex-1 bg-slate-100 py-3 rounded-2xl font-bold">キャンセル</button>
+            </div>
+            </div>
+        `;
+        
+        const mEl = document.getElementById('expenseModal');
+        if (!mEl) return;
+        mEl.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        const sheet = mEl.querySelector('.bottom-sheet');
+        if (sheet) { sheet.classList.remove('active'); setTimeout(() => sheet.classList.add('active'), 20); }
+        
+        // weight helpers
+        function refreshWeightControls(memberId, value) {
+            const input = document.querySelector(`#modal_weights input.weight-input[data-memberid="${memberId}"]`);
+            if (input) input.value = value.toFixed(1);
+            const onBtn = document.querySelector(`#modal_weights .weight-toggle-on[data-memberid="${memberId}"]`);
+            const offBtn = document.querySelector(`#modal_weights .weight-toggle-off[data-memberid="${memberId}"]`);
+            if (onBtn) {
+            if (value >= 0.95) { onBtn.classList.add('bg-indigo-600','text-white'); onBtn.classList.remove('bg-slate-100','text-slate-600'); onBtn.setAttribute('aria-pressed','true'); }
+            else { onBtn.classList.remove('bg-indigo-600','text-white'); onBtn.classList.add('bg-slate-100','text-slate-600'); onBtn.setAttribute('aria-pressed','false'); }
+            }
+            if (offBtn) {
+            if (value <= 0.05) { offBtn.classList.add('bg-indigo-600','text-white'); offBtn.classList.remove('bg-slate-100','text-slate-600'); offBtn.setAttribute('aria-pressed','true'); }
+            else { offBtn.classList.remove('bg-indigo-600','text-white'); offBtn.classList.add('bg-slate-100','text-slate-600'); offBtn.setAttribute('aria-pressed','false'); }
+            }
+        }
+        
+        function setWeightAndRefresh(memberId, rawValue) {
+            const v = Math.round(Math.max(0, rawValue) * 10) / 10;
+            exp.weights = exp.weights || {};
+            exp.weights[memberId] = v;
+        
+            triggerAutoSave();
+            refreshWeightControls(memberId, v);
+        
+            // minimal dashboard updates
+            const calc = calculate();
+            const totalEl = document.getElementById('totalAmount');
+            if (totalEl) totalEl.innerText = formatCurrency(calc.total);
+        
+            const summaryBody = document.getElementById('memberSummaryTable');
+            if (summaryBody) {
+            summaryBody.innerHTML = '';
+            state.members.forEach(m => {
+                const b = calc.balances[m.id] || { paid: 0, should: 0, diff: 0 };
                 const balanceColor = b.diff > 0.1 ? 'text-indigo-600' : (b.diff < -0.1 ? 'text-rose-500' : 'text-slate-400');
                 const balanceIcon = b.diff > 0.1 ? '+' : '';
-
+                const tr = document.createElement('tr');
+                tr.className = "font-bold text-slate-700";
                 tr.innerHTML = `
-                    <td class="p-4 font-black text-slate-800">${escapeHtml(m.name)}</td>
-                    <td class="p-4 text-right">${formatCurrency(b.paid)}</td>
-                    <td class="p-4 text-right text-slate-400 font-medium">${formatCurrency(b.should)}</td>
-                    <td class="p-4 text-right font-black italic text-lg ${balanceColor}">${balanceIcon}${formatCurrency(b.diff)}</td>
+                <td class="p-4 font-black text-slate-800">${escapeHtml(m.name)}</td>
+                <td class="p-4 text-right">${formatCurrency(b.paid)}</td>
+                <td class="p-4 text-right text-slate-400 font-medium">${formatCurrency(b.should)}</td>
+                <td class="p-4 text-right font-black italic text-lg ${balanceColor}">${balanceIcon}${formatCurrency(b.diff)}</td>
                 `;
                 summaryBody.appendChild(tr);
             });
-
-            // Settlement plan (Dashboard)
+            }
+        
             const planContainer = document.getElementById('settlementPlan');
+            if (planContainer) {
             planContainer.innerHTML = '';
-            if (calculation.plan.length === 0) {
-                planContainer.innerHTML = '貸し借りは現在ありません';
-            } else {
-                calculation.plan.forEach(p => {
-                    const div = document.createElement('div');
-                    div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100";
-                    div.innerHTML = `<div class="text-left"><span class="text-[9px] block text-rose-400 font-bold uppercase mb-1">支払う</span><span class="font-bold">${escapeHtml(p.fromName)}</span></div><i data-lucide="arrow-right" class="text-slate-300"></i><div class="text-right"><span class="text-[9px] block text-emerald-400 font-bold uppercase mb-1">受取る</span><span class="font-bold">${escapeHtml(p.toName)}</span></div><div class="ml-4 font-black italic text-lg text-slate-800">${formatCurrency(p.amount)}</div>`;
-                    planContainer.appendChild(div);
-                });
-            }
-
-            lucide.createIcons();
-            localStorage.setItem('fs_cache_' + state.projectId, JSON.stringify(state));
-        }
-
-        // --- Inline Editing Helpers ---
-        function createEditableTd(value, onSave, type = 'text', isCurrency = false) {
-            const td = document.createElement('td');
-            td.className = "p-4 cursor-pointer hover:bg-indigo-50/50 transition-all font-bold text-slate-700";
-            if (type === 'number' && !isCurrency) td.className += " text-right";
-            if (isCurrency) td.className += " text-right font-black italic text-slate-800";
-
-            const displayValue = isCurrency ? formatCurrency(value) : value;
-            td.innerText = displayValue;
-
-            td.onclick = (e) => {
-                if (td.querySelector('input')) return;
-                const input = document.createElement('input');
-                input.type = type;
-                input.value = value;
-                input.className = "inline-edit-input";
-                if (isCurrency || type === 'number') input.className += " text-right";
-                
-                td.innerText = '';
-                td.appendChild(input);
-                input.focus();
-
-                const save = () => {
-                    const newVal = input.value;
-                    td.removeChild(input);
-                    onSave(newVal);
-                };
-
-                input.onblur = save;
-                input.onkeydown = (ev) => { if (ev.key === 'Enter') save(); };
-            };
-            return td;
-        }
-
-        function createSelectTd(currentId, options, onSave) {
-            const td = document.createElement('td');
-            td.className = "p-4 cursor-pointer hover:bg-indigo-50/50 transition-all font-bold text-indigo-600";
-            const payer = options.find(o => o.id === currentId)?.name || '未選択';
-            td.innerText = payer;
-
-            td.onclick = () => {
-                if (td.querySelector('select')) return;
-                const select = document.createElement('select');
-                select.className = "inline-edit-input py-0";
-                options.forEach(opt => {
-                    const o = document.createElement('option');
-                    o.value = opt.id;
-                    o.innerText = opt.name;
-                    o.selected = opt.id === currentId;
-                    select.appendChild(o);
-                });
-
-                td.innerText = '';
-                td.appendChild(select);
-                select.focus();
-
-                const save = () => {
-                    const newVal = select.value;
-                    td.removeChild(select);
-                    onSave(newVal);
-                };
-
-                select.onblur = save;
-                select.onchange = save;
-            };
-            return td;
-        }
-
-        // --- Core Logic ---
-        function calculate() {
-            const balances = {}; 
-            state.members.forEach(m => {
-                balances[m.id] = { paid: 0, should: 0, diff: 0 };
+            if (calc.plan.length === 0) planContainer.innerHTML = '貸し借りは現在ありません';
+            else calc.plan.forEach(p => {
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100";
+                div.innerHTML = `<div class="text-left"><span class="text-[9px] block text-rose-400 font-bold uppercase mb-1">支払う</span><span class="font-bold">${escapeHtml(p.fromName)}</span></div><div class="text-right font-black">${formatCurrency(p.amount)} → ${escapeHtml(p.toName)}</div>`;
+                planContainer.appendChild(div);
             });
-
-            let total = 0;
-            state.expenses.forEach(exp => {
-                const amt = parseFloat(exp.amount) || 0; 
-                total += amt;
-
-                // 支払記録
-                if (balances[exp.payerId]) {
-                    balances[exp.payerId].paid += amt;
-                }
-
-                // 負担分計算
-                let totalWeight = 0; 
-                state.members.forEach(m => totalWeight += (parseFloat(exp.weights[m.id]) || 0));
-                
-                if (totalWeight > 0) {
-                    const perWeight = amt / totalWeight;
-                    state.members.forEach(m => {
-                        const mWeight = parseFloat(exp.weights[m.id]) || 0;
-                        balances[m.id].should += mWeight * perWeight;
-                    });
-                }
-            });
-
-            // 差額計算
-            Object.keys(balances).forEach(id => {
-                balances[id].diff = balances[id].paid - balances[id].should;
-            });
-
-            // 精算プラン作成
-            const d = [], c = [];
-            Object.entries(balances).forEach(([id, b]) => {
-                const name = state.members.find(m => m.id === id)?.name || '不明';
-                if (b.diff < -0.1) d.push({ id, amt: b.diff, name }); 
-                else if (b.diff > 0.1) c.push({ id, amt: b.diff, name });
-            });
-
-            const plan = []; 
-            let i=0, j=0;
-            const dCopy = JSON.parse(JSON.stringify(d)); 
-            const cCopy = JSON.parse(JSON.stringify(c));
-
-            while(i < dCopy.length && j < cCopy.length) {
-                const s = Math.min(Math.abs(dCopy[i].amt), cCopy[j].amt);
-                if(s > 0.1) plan.push({ fromName: dCopy[i].name, toName: cCopy[j].name, amount: s });
-                dCopy[i].amt += s; 
-                cCopy[j].amt -= s;
-                if(Math.abs(dCopy[i].amt) < 0.1) i++; 
-                if(cCopy[j].amt < 0.1) j++;
-            }
-
-            return { total, plan, balances };
-        }
-
-        function updateExpData(id, k, v) { 
-            const exp = state.expenses.find(e => e.id === id); 
-            if (exp) { 
-                exp[k] = (k === 'amount') ? (parseFloat(v) || 0) : v; 
-                render(); 
-                triggerAutoSave();
-            } 
-        }
-
-        function createNewExpense(e) {
-            if (e && e.preventDefault) e.preventDefault();
-            if (state.members.length === 0) {
-                // メンバーがいなければ追加フローへ
-                addMember(e);
-                return;
-            }
-            const id = 'e_' + Math.random().toString(36).substr(2, 9);
-            const weights = {};
-            state.members.forEach(m => weights[m.id] = 1);
-            const newExp = { id, title: '', amount: 0, payerId: state.members[0].id, weights };
-            state.expenses.unshift(newExp);
-            // 描画して即座に編集モーダルを開く
-            render();
-            openExpenseModal(id);
-            }
-
-
-        function deleteExpense(id) {
-            if (confirm('この支出を削除しますか？')) {
-                state.expenses = state.expenses.filter(e => e.id !== id);
-                render();
-                triggerAutoSave();
             }
         }
-
-        // --- Members ---
-        function addMember(e) {
-            if (e) e.preventDefault();
-            const name = prompt('名前：'); if (!name || name.trim() === "") return;
-            const id = 'm_' + Math.random().toString(36).substr(2, 5);
-            state.members.push({ id, name: name.trim() });
-            state.expenses.forEach(exp => { if (exp.weights[id] === undefined) exp.weights[id] = 1; });
+        
+        // attach event listeners
+        document.querySelectorAll('#modal_weights .weight-toggle-on').forEach(btn => btn.addEventListener('click', () => setWeightAndRefresh(btn.dataset.memberid, 1)));
+        document.querySelectorAll('#modal_weights .weight-toggle-off').forEach(btn => btn.addEventListener('click', () => setWeightAndRefresh(btn.dataset.memberid, 0)));
+        document.querySelectorAll('#modal_weights .weight-inc').forEach(btn => btn.addEventListener('click', () => {
+            const mid = btn.dataset.memberid;
+            const cur = parseFloat(document.querySelector(`#modal_weights input.weight-input[data-memberid="${mid}"]`).value) || 0;
+            setWeightAndRefresh(mid, cur + 0.1);
+        }));
+        document.querySelectorAll('#modal_weights .weight-dec').forEach(btn => btn.addEventListener('click', () => {
+            const mid = btn.dataset.memberid;
+            const cur = parseFloat(document.querySelector(`#modal_weights input.weight-input[data-memberid="${mid}"]`).value) || 0;
+            setWeightAndRefresh(mid, Math.max(0, cur - 0.1));
+        }));
+        document.querySelectorAll('#modal_weights input.weight-input').forEach(inp => {
+            inp.addEventListener('input', () => {
+            const mid = inp.dataset.memberid;
+            let val = parseFloat(inp.value); if (isNaN(val)) val = 0;
+            setWeightAndRefresh(mid, val);
+            });
+            inp.addEventListener('blur', () => {
+            const mid = inp.dataset.memberid;
+            const v = parseFloat(inp.value);
+            setWeightAndRefresh(mid, isNaN(v) ? 0 : v);
+            });
+        });
+        
+        // save/cancel
+        const saveBtn = document.getElementById('modal_save');
+        if (saveBtn) saveBtn.onclick = () => {
+            const title = (document.getElementById('modal_title') || {}).value || '';
+            const amount = parseFloat((document.getElementById('modal_amount') || {}).value) || 0;
+            const payerId = (document.getElementById('modal_payer') || {}).value || exp.payerId;
+            exp.title = title.trim();
+            exp.amount = amount;
+            exp.payerId = payerId;
             render();
             triggerAutoSave();
+            closeExpenseModal();
+        };
+        const cancelBtn = document.getElementById('modal_cancel');
+        if (cancelBtn) cancelBtn.onclick = () => closeExpenseModal();
+        
+        // sync initial toggle states
+        state.members.forEach(m => {
+            const v = Number(exp.weights?.[m.id] ?? 0);
+            refreshWeightControls(m.id, v);
+        });
+        
+        setTimeout(() => {
+            const t = document.getElementById('modal_title');
+            if (t) t.focus();
+        }, 60);
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
         }
-
+        
+        function closeExpenseModal() {
+        const m = document.getElementById('expenseModal');
+        if (!m) return;
+        m.querySelector('.bottom-sheet')?.classList.remove('active');
+        setTimeout(() => {
+            document.body.style.overflow = '';
+            m.classList.add('hidden');
+        }, 300);
+        }
+        
+        /* Members */
+        function addMember(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        const name = prompt('名前：');
+        if (!name || !name.trim()) return;
+        const id = 'm_' + Math.random().toString(36).substr(2, 5);
+        state.members.push({ id, name: name.trim() });
+        state.expenses.forEach(exp => { if (!exp.weights) exp.weights = {}; if (exp.weights[id] === undefined) exp.weights[id] = 1; });
+        render();
+        triggerAutoSave();
+        }
+        
         function openMemberManager() {
-            const content = document.getElementById('memberListContent');
-            content.innerHTML = state.members.length === 0 ? '<p class="text-center py-10 text-slate-400 italic">なし</p>' : '';
-            state.members.forEach(m => {
-                const div = document.createElement('div'); div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100";
-                div.innerHTML = `<span class="font-bold text-slate-800">${escapeHtml(m.name)}</span><div class="flex items-center gap-2"><button onclick="deleteMember('${m.id}')" class="p-2 text-slate-400 hover:text-rose-500 bg-white rounded-xl shadow-sm border border-slate-200"><i data-lucide="trash-2" size="16"></i></button></div>`;
-                content.appendChild(div);
-            });
-            const modal = document.getElementById('memberModal'); modal.classList.remove('hidden');
-            setTimeout(() => modal.querySelector('.bottom-sheet').classList.add('active'), 10);
-            lucide.createIcons();
+        const content = document.getElementById('memberListContent');
+        if (!content) return;
+        content.innerHTML = state.members.length === 0 ? '<p class="text-center py-10 text-slate-400 italic">なし</p>' : '';
+        state.members.forEach(m => {
+            const div = document.createElement('div'); div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100";
+            div.innerHTML = `<span class="font-bold text-slate-800">${escapeHtml(m.name)}</span><div class="flex items-center gap-2"><button onclick="deleteMember('${m.id}')" class="p-2 text-slate-400 hover:text-rose-500 bg-white rounded-xl shadow-sm border border-slate-200"><i data-lucide="trash-2" size="16"></i></button></div>`;
+            content.appendChild(div);
+        });
+        const modal = document.getElementById('memberModal'); modal.classList.remove('hidden');
+        setTimeout(() => modal.querySelector('.bottom-sheet').classList.add('active'), 10);
+        lucide.createIcons();
         }
-
+        
         function deleteMember(id) {
-            if (confirm('メンバーを削除しますか？（過去の記録にも影響します）')) {
-                state.members = state.members.filter(m => m.id !== id);
-                state.expenses.forEach(exp => delete exp.weights[id]);
-                render(); openMemberManager(); triggerAutoSave();
-            }
+        if (!confirm('メンバーを削除しますか？（過去の記録にも影響します）')) return;
+        state.members = state.members.filter(m => m.id !== id);
+        state.expenses.forEach(exp => { if (exp.weights) delete exp.weights[id]; });
+        render();
+        triggerAutoSave();
+        openMemberManager();
         }
-
-        function closeMemberModal() { const m = document.getElementById('memberModal'); m.querySelector('.bottom-sheet').classList.remove('active'); setTimeout(() => m.classList.add('hidden'), 300); }
-
-        // --- Details Modal ---
-        function openExpenseModal(id) {
-            const exp = state.expenses.find(e => e.id === id);
-            if (!exp) return;
-            const content = document.getElementById('modalContent');
-
-            // Build modal HTML
-            content.innerHTML = `
-                <div class="space-y-6">
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">項目名</label>
-                    <input id="modal_title" type="text" value="${escapeHtml(exp.title || '')}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none" />
-                </div>
-
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">金額</label>
-                    <input id="modal_amount" type="number" inputmode="numeric" min="0" step="0.1" value="${Number(exp.amount || 0)}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-black text-right outline-none" />
-                </div>
-
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">支払者</label>
-                    <select id="modal_payer" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none">
-                    ${state.members.map(m => `<option value="${m.id}" ${m.id === exp.payerId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
-                    </select>
-                </div>
-
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">分配（Weight）</label>
-                    <div id="modal_weights" class="space-y-2">
-                    ${state.members.map(m => {
-                        const val = Number(exp.weights?.[m.id] ?? 0);
-                        const onClass = val >= 0.95 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600';
-                        const offClass = val <= 0.05 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600';
-                        return `
-                        <div class="flex items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            <div class="font-bold text-slate-800">${escapeHtml(m.name)}</div>
-                            <div class="flex items-center gap-2">
-                            <div class="flex items-center gap-1">
-                                <button type="button" class="weight-toggle-off px-3 py-1 rounded-full ${offClass}" data-memberid="${m.id}" aria-pressed="${val <= 0.05}">OFF</button>
-                                <button type="button" class="weight-toggle-on px-3 py-1 rounded-full ${onClass}" data-memberid="${m.id}" aria-pressed="${val >= 0.95}">ON</button>
-                            </div>
-                            <div class="flex items-center gap-1 bg-white rounded-md p-1 border border-slate-100">
-                                <button type="button" class="weight-dec px-2 py-1 rounded text-slate-600 bg-slate-100" data-memberid="${m.id}">−</button>
-                                <input data-memberid="${m.id}" class="weight-input w-20 text-right bg-transparent outline-none text-sm font-bold" type="number" step="0.1" min="0" value="${val.toFixed(1)}" />
-                                <button type="button" class="weight-inc px-2 py-1 rounded text-slate-600 bg-slate-100" data-memberid="${m.id}">+</button>
-                            </div>
-                            </div>
-                        </div>
-                        `;
-                    }).join('')}
-                    </div>
-                </div>
-
-                <div class="flex gap-3">
-                    <button id="modal_save" class="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold">保存</button>
-                    <button id="modal_cancel" class="flex-1 bg-slate-100 py-3 rounded-2xl font-bold">キャンセル</button>
-                </div>
-                </div>
-            `;
-
-            // 表示制御（親の hidden を外し、bottom-sheet を active に）
-            const mEl = document.getElementById('expenseModal');
-            mEl.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-            const sheet = mEl.querySelector('.bottom-sheet');
-            if (sheet) {
-                sheet.classList.remove('active');
-                setTimeout(() => sheet.classList.add('active'), 20);
-            }
-
-            // --- weight 更新ロジック（render を頻繁に呼ばない） ---
-            function refreshWeightControls(memberId, value) {
-                const input = document.querySelector(`#modal_weights input.weight-input[data-memberid="${memberId}"]`);
-                if (input) input.value = value.toFixed(1);
-
-                const onBtn = document.querySelector(`#modal_weights .weight-toggle-on[data-memberid="${memberId}"]`);
-                const offBtn = document.querySelector(`#modal_weights .weight-toggle-off[data-memberid="${memberId}"]`);
-                if (onBtn) {
-                if (value >= 0.95) {
-                    onBtn.classList.add('bg-indigo-600','text-white'); onBtn.classList.remove('bg-slate-100','text-slate-600'); onBtn.setAttribute('aria-pressed','true');
-                } else {
-                    onBtn.classList.remove('bg-indigo-600','text-white'); onBtn.classList.add('bg-slate-100','text-slate-600'); onBtn.setAttribute('aria-pressed','false');
-                }
-                }
-                if (offBtn) {
-                if (value <= 0.05) {
-                    offBtn.classList.add('bg-indigo-600','text-white'); offBtn.classList.remove('bg-slate-100','text-slate-600'); offBtn.setAttribute('aria-pressed','true');
-                } else {
-                    offBtn.classList.remove('bg-indigo-600','text-white'); offBtn.classList.add('bg-slate-100','text-slate-600'); offBtn.setAttribute('aria-pressed','false');
-                }
-                }
-            }
-
-            function setWeightAndRefresh(memberId, rawValue) {
-                const v = Math.round(Math.max(0, rawValue) * 10) / 10;
-                exp.weights = exp.weights || {};
-                exp.weights[memberId] = v;
-
-                // 即時の自動保存（デバウンス���）を呼ぶ
-                triggerAutoSave();
-
-                // モーダル内だけのUI更新
-                refreshWeightControls(memberId, v);
-
-                // ダッシュボードの最小限更新（全体 render を避ける）
-                const calc = calculate();
-                const totalEl = document.getElementById('totalAmount');
-                if (totalEl) totalEl.innerText = formatCurrency(calc.total);
-
-                const summaryBody = document.getElementById('memberSummaryTable');
-                if (summaryBody) {
-                summaryBody.innerHTML = '';
-                state.members.forEach(m => {
-                    const b = calc.balances[m.id] || { paid: 0, should: 0, diff: 0 };
-                    const balanceColor = b.diff > 0.1 ? 'text-indigo-600' : (b.diff < -0.1 ? 'text-rose-500' : 'text-slate-400');
-                    const balanceIcon = b.diff > 0.1 ? '+' : '';
-                    const tr = document.createElement('tr');
-                    tr.className = "font-bold text-slate-700";
-                    tr.innerHTML = `
-                    <td class="p-4 font-black text-slate-800">${escapeHtml(m.name)}</td>
-                    <td class="p-4 text-right">${formatCurrency(b.paid)}</td>
-                    <td class="p-4 text-right text-slate-400 font-medium">${formatCurrency(b.should)}</td>
-                    <td class="p-4 text-right font-black italic text-lg ${balanceColor}">${balanceIcon}${formatCurrency(b.diff)}</td>
-                    `;
-                    summaryBody.appendChild(tr);
-                });
-                }
-
-                const planContainer = document.getElementById('settlementPlan');
-                if (planContainer) {
-                planContainer.innerHTML = '';
-                if (calc.plan.length === 0) {
-                    planContainer.innerHTML = '貸し借りは現在ありません';
-                } else {
-                    calc.plan.forEach(p => {
-                    const div = document.createElement('div');
-                    div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100";
-                    div.innerHTML = `<div class="text-left"><span class="text-[9px] block text-rose-400 font-bold uppercase mb-1">支払う</span><span class="font-bold">${escapeHtml(p.fromName)}</span></div><div class="text-right font-black">${formatCurrency(p.amount)} → ${escapeHtml(p.toName)}</div>`;
-                    planContainer.appendChild(div);
-                    });
-                }
-                }
-            }
-
-            // イベントバインド：トグル / +/- / 直接入力
-            // ON
-            document.querySelectorAll('#modal_weights .weight-toggle-on').forEach(btn => {
-                btn.addEventListener('click', () => {
-                const mid = btn.dataset.memberid;
-                setWeightAndRefresh(mid, 1);
-                });
-            });
-            // OFF
-            document.querySelectorAll('#modal_weights .weight-toggle-off').forEach(btn => {
-                btn.addEventListener('click', () => {
-                const mid = btn.dataset.memberid;
-                setWeightAndRefresh(mid, 0);
-                });
-            });
-            // + 
-            document.querySelectorAll('#modal_weights .weight-inc').forEach(btn => {
-                btn.addEventListener('click', () => {
-                const mid = btn.dataset.memberid;
-                const cur = parseFloat(document.querySelector(`#modal_weights input.weight-input[data-memberid="${mid}"]`).value) || 0;
-                setWeightAndRefresh(mid, cur + 0.1);
-                });
-            });
-            // -
-            document.querySelectorAll('#modal_weights .weight-dec').forEach(btn => {
-                btn.addEventListener('click', () => {
-                const mid = btn.dataset.memberid;
-                const cur = parseFloat(document.querySelector(`#modal_weights input.weight-input[data-memberid="${mid}"]`).value) || 0;
-                setWeightAndRefresh(mid, Math.max(0, cur - 0.1));
-                });
-            });
-            // direct input (live update)
-            document.querySelectorAll('#modal_weights input.weight-input').forEach(inp => {
-                inp.addEventListener('input', () => {
-                const mid = inp.dataset.memberid;
-                let val = parseFloat(inp.value);
-                if (isNaN(val)) val = 0;
-                setWeightAndRefresh(mid, val);
-                });
-                inp.addEventListener('blur', () => {
-                const mid = inp.dataset.memberid;
-                const v = parseFloat(inp.value);
-                setWeightAndRefresh(mid, isNaN(v) ? 0 : v);
-                });
-            });
-
-            // 保存 / キャンセル
-            const saveBtn = document.getElementById('modal_save');
-            if (saveBtn) {
-                saveBtn.onclick = () => {
-                const title = (document.getElementById('modal_title') || {}).value || '';
-                const amount = parseFloat((document.getElementById('modal_amount') || {}).value) || 0;
-                const payerId = (document.getElementById('modal_payer') || {}).value || exp.payerId;
-                exp.title = title.trim();
-                exp.amount = amount;
-                exp.payerId = payerId;
-                // 保存後はフル render して UI を整える
-                render();
-                triggerAutoSave();
-                closeExpenseModal();
-                };
-            }
-            const cancelBtn = document.getElementById('modal_cancel');
-            if (cancelBtn) {
-                cancelBtn.onclick = () => closeExpenseModal();
-            }
-
-            // 初期状態の同期（各ボタンの色など）
-            state.members.forEach(m => {
-                const v = Number(exp.weights?.[m.id] ?? 0);
-                refreshWeightControls(m.id, v);
-            });
-
-            // フォーカス
-            setTimeout(() => {
-                const t = document.getElementById('modal_title');
-                if (t) t.focus();
-            }, 60);
-
-            // アイコン生成
-            if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
-            }
-
-            function closeExpenseModal() {
-            const m = document.getElementById('expenseModal');
-            if (!m) return;
-            const sheet = m.querySelector('.bottom-sheet');
-            if (sheet) sheet.classList.remove('active');
-            setTimeout(() => {
-                document.body.style.overflow = '';
-                m.classList.add('hidden');
-            }, 300);
-            }
-
-    // トランジションの長さに合わせて hidden にする
-    setTimeout(() => {
-      document.body.style.overflow = '';
-      m.classList.add('hidden');
-    }, 300);
-  
-        // --- Utils ---
-        function formatCurrency(n) { return '¥' + Math.round(n).toLocaleString(); }
-        function escapeHtml(s) { return s ? s.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) : ''; }
-        function switchTab(t) {
-            document.getElementById('view-input').classList.toggle('hidden', t !== 'input');
-            document.getElementById('view-list').classList.toggle('hidden', t !== 'list');
-            const bI = document.getElementById('tab-input'), bL = document.getElementById('tab-list');
-            const active = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-200";
-            const inactive = "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50";
-            bI.className = t === 'input' ? active : inactive;
-            bL.className = t === 'list' ? active : inactive;
-            render();
+        
+        function closeMemberModal() {
+        const m = document.getElementById('memberModal');
+        if (!m) return;
+        m.querySelector('.bottom-sheet')?.classList.remove('active');
+        setTimeout(() => m.classList.add('hidden'), 300);
         }
-        function toggleConfig() { document.getElementById('configModal').classList.toggle('hidden'); }
-        function saveConfig() { gasUrl = document.getElementById('gasUrlInput').value.trim(); localStorage.setItem('fair_share_gas_url_v3', gasUrl); toggleConfig(); if (gasUrl) fetchData(); }
-        function copyShareUrl() { const u = new URL(window.location.href); u.searchParams.set('pid', state.projectId); const t = document.createElement("input"); document.body.appendChild(t); t.value = u.toString(); t.select(); document.execCommand("copy"); document.body.removeChild(t); alert("共有用URLをコピーしました！"); }
-        let autoSaveTimer = null;
-        function triggerAutoSave() { if (autoSaveTimer) clearTimeout(autoSaveTimer); autoSaveTimer = setTimeout(() => saveToCloud(), 2000); }
-        async function fetchData() { if (!gasUrl) return; setSyncing(true); try { const r = await fetch(`${gasUrl}?action=get&projectId=${state.projectId}`); const j = await r.json(); if (j.ok && j.data) { state = j.data; render(); } } catch(e) {} setSyncing(false); }
-        async function saveToCloud() { if (!gasUrl) return; setSyncing(true); try { await fetch(gasUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'save', projectId: state.projectId, payload: state, projectName: state.title }) }); } catch(e) {} setSyncing(false); }
-        function setSyncing(s) { const b = document.getElementById('syncBtn'); if (b) { const i = b.querySelector('i'); if (s) i.classList.add('animate-spin'); else i.classList.remove('animate-spin'); } }
-    </script>
+        
+        /* Sync / Helpers */
+        function triggerAutoSave() {
+        if (autoSaveTimer) clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => saveToCloud(), 2000);
+        }
+        
+        async function fetchData() {
+        if (!gasUrl) return;
+        setSyncing(true);
+        try {
+            const r = await fetch(`${gasUrl}?action=get&projectId=${state.projectId}`);
+            const j = await r.json();
+            if (j.ok && j.data) { state = j.data; render(); }
+        } catch(e) {}
+        setSyncing(false);
+        }
+        
+        async function saveToCloud() {
+        if (!gasUrl) return;
+        setSyncing(true);
+        try {
+            await fetch(gasUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'save', projectId: state.projectId, payload: state, projectName: state.title }) });
+        } catch(e) {}
+        setSyncing(false);
+        }
+        
+        function setSyncing(s) { const b = document.getElementById('syncBtn'); if (!b) return; const i = b.querySelector('i'); if (!i) return; if (s) i.classList.add('animate-spin'); else i.classList.remove('animate-spin'); }
+        
+        function copyShareUrl() {
+        const u = new URL(window.location.href);
+        u.searchParams.set('pid', state.projectId);
+        const t = document.createElement("input"); document.body.appendChild(t); t.value = u.toString(); t.select(); document.execCommand("copy"); document.body.removeChild(t); alert("共有用URLをコピーしました！");
+        }
+        </script>
+
 </body>
 </html>
