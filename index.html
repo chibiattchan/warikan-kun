@@ -637,16 +637,59 @@
                 setTimeout(() => sheet.classList.add('active'), 20);
 
                 // --- イベントバインド（ON/OFF, +/-, input） ---
-                // helper to update weight in state (round to 0.1)
+                // --- replace the previous setWeightAndRefresh & related minimal UI update logic ---
                 function setWeightAndRefresh(memberId, rawValue) {
                 const v = Math.round(Math.max(0, rawValue) * 10) / 10;
                 exp.weights = exp.weights || {};
                 exp.weights[memberId] = v;
-                // reflect immediately to app state and UI
-                render();        // update dashboard / tables
+
+                // 即時保存はデバウンス済みの triggerAutoSave を呼ぶ（重い処理は避ける）
                 triggerAutoSave();
-                // update modal controls to reflect current value
+
+                // モーダル内のコントロールを更新（トグル色・入力値）
                 refreshWeightControls(memberId, v);
+
+                // ダッシュボード上の最低限の表示を更新（全体再描画を避ける）
+                const calc = calculate();
+                // 合計額表示
+                const totalEl = document.getElementById('totalAmount');
+                if (totalEl) totalEl.innerText = formatCurrency(calc.total);
+
+                // メンバー別集計テーブル（簡易更新：全行を上書き）
+                const summaryBody = document.getElementById('memberSummaryTable');
+                if (summaryBody) {
+                    summaryBody.innerHTML = '';
+                    state.members.forEach(m => {
+                    const b = calc.balances[m.id] || { paid: 0, should: 0, diff: 0 };
+                    const balanceColor = b.diff > 0.1 ? 'text-indigo-600' : (b.diff < -0.1 ? 'text-rose-500' : 'text-slate-400');
+                    const balanceIcon = b.diff > 0.1 ? '+' : '';
+                    const tr = document.createElement('tr');
+                    tr.className = "font-bold text-slate-700";
+                    tr.innerHTML = `
+                        <td class="p-4 font-black text-slate-800">${escapeHtml(m.name)}</td>
+                        <td class="p-4 text-right">${formatCurrency(b.paid)}</td>
+                        <td class="p-4 text-right text-slate-400 font-medium">${formatCurrency(b.should)}</td>
+                        <td class="p-4 text-right font-black italic text-lg ${balanceColor}">${balanceIcon}${formatCurrency(b.diff)}</td>
+                    `;
+                    summaryBody.appendChild(tr);
+                    });
+                }
+
+                // 精算プラン（最低限の置き換え）
+                const planContainer = document.getElementById('settlementPlan');
+                if (planContainer) {
+                    planContainer.innerHTML = '';
+                    if (calc.plan.length === 0) {
+                    planContainer.innerHTML = '貸し借りは現在ありません';
+                    } else {
+                    calc.plan.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100";
+                        div.innerHTML = `<div class="text-left"><span class="text-[9px] block text-rose-400 font-bold uppercase mb-1">支払う</span><span class="font-bold">${escapeHtml(p.fromName)}</span></div><div class="text-right font-black">${formatCurrency(p.amount)} → ${escapeHtml(p.toName)}</div>`;
+                        planContainer.appendChild(div);
+                    });
+                    }
+                }
                 }
 
                 // refresh single member's controls (toggle colors and input value)
