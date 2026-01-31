@@ -6,73 +6,86 @@
     <title>わりかん君 Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.css">
-    v7<style> 
-        
-          /* existing imports / base rules ... */
-        
-          /* bottom-sheet 基本 */
+    v8<style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+      
+        body {
+          font-family: 'Noto Sans JP', sans-serif;
+          -webkit-tap-highlight-color: transparent;
+          overscroll-behavior-y: none;
+        }
+      
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+      
+        /* スピン（上下矢印）は表示したいので -webkit-appearance を消さない */
+      
+        .inline-edit-input {
+          @apply w-full bg-indigo-50 border-2 border-indigo-400 rounded px-1 font-bold text-slate-900 outline-none;
+        }
+      
+        /* bottom-sheet 共通（非表示時は下へ、透明） */
+        .bottom-sheet {
+          transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease;
+          transform: translateY(100%);
+          opacity: 0;
+          will-change: transform, opacity;
+          position: fixed;
+          left: 0;
+          right: 0;
+          z-index: 1200;
+          pointer-events: none; /* 非表示時は操作を無効化 */
+        }
+      
+        /* PC（>=640px）：中央表示（デフォルトは少し下にずらして隠す） */
+        @media (min-width: 640px) {
           .bottom-sheet {
-            transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease;
-            transform: translateY(100%);
+            left: 50%;
+            top: 50%;
+            right: auto;
+            bottom: auto;
+            width: min(720px, calc(100% - 48px));
+            transform: translate(-50%, -60%) scale(0.98);
             opacity: 0;
-            will-change: transform, opacity;
-            position: fixed;
+            border-radius: 1.25rem;
+            max-height: 90vh;
+            overflow: auto;
+            padding: 1.5rem;
+          }
+          .bottom-sheet.active {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+          }
+        }
+      
+        /* スマホ（<=639px）：下からスライドアップ */
+        @media (max-width: 639px) {
+          .bottom-sheet {
             left: 0;
             right: 0;
-            z-index: 1200;            /* 前面に出す */
-            pointer-events: none;     /* 非表示時は操作を無効化 */
+            bottom: 0;
+            width: 100%;
+            border-top-left-radius: 1.25rem;
+            border-top-right-radius: 1.25rem;
+            max-height: 92vh;
+            overflow-y: auto;
+            transform: translateY(100%);
+            opacity: 0;
           }
-        
-          /* PC（>=640px）：中央表示にする（初期は少し下にずらして透明） */
-          @media (min-width: 640px) {
-            .bottom-sheet {
-              left: 50%;
-              top: 50%;
-              right: auto;
-              bottom: auto;
-              width: min(720px, calc(100% - 48px));
-              transform: translate(-50%, -60%) scale(0.98); /* 少し下・縮小で隠す */
-              opacity: 0;
-              border-radius: 1.25rem;
-              max-height: 90vh;
-              overflow: auto;
-              padding: 1.5rem;
-            }
-            .bottom-sheet.active {
-              transform: translate(-50%, -50%) scale(1);
-              opacity: 1;
-              pointer-events: auto; /* 表示時に操作を有効化 */
-            }
+          .bottom-sheet.active {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
           }
-        
-          /* スマホ（<=639px）：下からスライドアップ */
-          @media (max-width: 639px) {
-            .bottom-sheet {
-              left: 0;
-              right: 0;
-              bottom: 0;
-              width: 100%;
-              border-top-left-radius: 1.25rem;
-              border-top-right-radius: 1.25rem;
-              max-height: 92vh;
-              overflow-y: auto;
-              transform: translateY(100%);
-              opacity: 0;
-            }
-            .bottom-sheet.active {
-              transform: translateY(0);
-              opacity: 1;
-              pointer-events: auto;
-            }
-          }
-        
-          /* モーダルのオーバーレイを確実に背面に */
-          #expenseModal > .absolute[inset-0],
-          #memberModal > .absolute[inset-0],
-          #configModal > .absolute[inset-0] {
-            z-index: 1100;
-          }
-        </style>
+        }
+      
+        /* モーダルのオーバーレイを確実に背面に（修正: 属性セレクタではなくクラスの組み合わせで指定） */
+        #expenseModal > .absolute.inset-0,
+        #memberModal > .absolute.inset-0,
+        #configModal > .absolute.inset-0 {
+          z-index: 1100;
+        }
+      </style>
 </head>
 <body class="bg-slate-50 text-slate-900 pb-32">
 
