@@ -6,80 +6,73 @@
     <title>わりかん君 Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+    /* --- replace <style> (or merge below rules into existing style) --- */
+        <style>
+          /* existing imports / base rules ... */
         
-        body {
-            font-family: 'Noto Sans JP', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-            overscroll-behavior-y: none;
-        }
-    
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-    
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-    
-        .inline-edit-input {
-            @apply w-full bg-indigo-50 border-2 border-indigo-400 rounded px-1 font-bold text-slate-900 outline-none;
-        }
-    
-        /* 共通：モーダル（bottom-sheet）の基本 */
-        .bottom-sheet {
+          /* bottom-sheet 基本 */
+          .bottom-sheet {
             transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease;
             transform: translateY(100%);
             opacity: 0;
             will-change: transform, opacity;
-            /* 保険で固定レイアウトにしておく（子要素側の位置指定に依存） */
             position: fixed;
             left: 0;
             right: 0;
-        }
-    
-        /* PC（>=640px）：中央表示にする */
-        @media (min-width: 640px) {
+            z-index: 1200;            /* 前面に出す */
+            pointer-events: none;     /* 非表示時は操作を無効化 */
+          }
+        
+          /* PC（>=640px）：中央表示にする（初期は少し下にずらして透明） */
+          @media (min-width: 640px) {
             .bottom-sheet {
-                /* 中央に置く */
-                left: 50%;
-                top: 50%;
-                right: auto;
-                bottom: auto;
-                width: min(720px, calc(100% - 48px));
-                transform: translate(-50%, -50%);
-                opacity: 1; /* デフォルトで visible に（親の hidden で隠れる） */
-                border-radius: 1.25rem;
-                max-height: 90vh;
-                overflow: auto;
-                padding: 1.5rem;
-            }
-            /* active は微妙なポップアニメにしておく（任意） */
-            .bottom-sheet.active {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 1;
-            }
-        }
-    
-        /* スマホ（<=639px）：下からスライドアップ */
-        @media (max-width: 639px) {
-            .bottom-sheet {
-                left: 0;
-                right: 0;
-                bottom: 0;
-                width: 100%;
-                border-top-left-radius: 1.25rem;
-                border-top-right-radius: 1.25rem;
-                max-height: 92vh;
-                overflow-y: auto;
+              left: 50%;
+              top: 50%;
+              right: auto;
+              bottom: auto;
+              width: min(720px, calc(100% - 48px));
+              transform: translate(-50%, -60%) scale(0.98); /* 少し下・縮小で隠す */
+              opacity: 0;
+              border-radius: 1.25rem;
+              max-height: 90vh;
+              overflow: auto;
+              padding: 1.5rem;
             }
             .bottom-sheet.active {
-                transform: translateY(0);
-                opacity: 1;
+              transform: translate(-50%, -50%) scale(1);
+              opacity: 1;
+              pointer-events: auto; /* 表示時に操作を有効化 */
             }
-        }
-    </style>
+          }
+        
+          /* スマホ（<=639px）：下からスライドアップ */
+          @media (max-width: 639px) {
+            .bottom-sheet {
+              left: 0;
+              right: 0;
+              bottom: 0;
+              width: 100%;
+              border-top-left-radius: 1.25rem;
+              border-top-right-radius: 1.25rem;
+              max-height: 92vh;
+              overflow-y: auto;
+              transform: translateY(100%);
+              opacity: 0;
+            }
+            .bottom-sheet.active {
+              transform: translateY(0);
+              opacity: 1;
+              pointer-events: auto;
+            }
+          }
+        
+          /* モーダルのオーバーレイを確実に背面に */
+          #expenseModal > .absolute[inset-0],
+          #memberModal > .absolute[inset-0],
+          #configModal > .absolute[inset-0] {
+            z-index: 1100;
+          }
+        </style>
 </head>
 <body class="bg-slate-50 text-slate-900 pb-32">
 
@@ -575,13 +568,46 @@
         function closeMemberModal() { const m = document.getElementById('memberModal'); m.querySelector('.bottom-sheet').classList.remove('active'); setTimeout(() => m.classList.add('hidden'), 300); }
 
         // --- Details Modal ---
+        /* --- replace openExpenseModal / closeExpenseModal implementations --- */
         function openExpenseModal(id) {
             const exp = state.expenses.find(e => e.id === id); if (!exp) return;
             const content = document.getElementById('modalContent');
-            content.innerHTML = `<div class="space-y-6"><div><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">項目名</label><input type="text" value="${escapeHtml(exp.title)}" oninput="updateExpData('${id}', 'title', this.value)" class="w-full text-xl font-bold border-b-2 border-slate-100 focus:border-indigo-500 outline-none py-2 px-1"></div><div><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">金額</label><input type="number" value="${exp.amount}" oninput="updateExpData('${id}', 'amount', this.value)" class="w-full text-2xl font-black italic border-b-2 border-slate-100 focus:border-indigo-500 outline-none py-2 px-1"></div></div>`;
-            const m = document.getElementById('expenseModal'); m.classList.remove('hidden'); setTimeout(() => m.querySelector('.bottom-sheet').classList.add('active'), 10); lucide.createIcons();
+            // Build content (keep your existing content generation)
+            content.innerHTML = `<div class="space-y-6">...</div>`; // your existing template
+
+            const m = document.getElementById('expenseModal');
+            // Remove hidden (Tailwind) so it becomes display:block
+            m.classList.remove('hidden');
+
+            // prevent background scroll while modal open
+            document.body.style.overflow = 'hidden';
+
+            // ensure bottom-sheet reference
+            const sheet = m.querySelector('.bottom-sheet');
+            // clear any previous state
+            sheet.classList.remove('active');
+
+            // small delay to allow browser to apply display change, then animate
+            setTimeout(() => sheet.classList.add('active'), 30);
+
+            lucide.createIcons();
         }
-        function closeExpenseModal() { const m = document.getElementById('expenseModal'); m.querySelector('.bottom-sheet').classList.remove('active'); setTimeout(() => m.classList.add('hidden'), 300); }
+
+        function closeExpenseModal() {
+            const m = document.getElementById('expenseModal');
+            const sheet = m.querySelector('.bottom-sheet');
+            if (!sheet) return;
+
+            // animate out
+            sheet.classList.remove('active');
+
+            // restore body scroll after animation
+            setTimeout(() => {
+            document.body.style.overflow = '';
+            // hide container again (Tailwind hidden)
+            m.classList.add('hidden');
+            }, 280); // CSS トランジションと合わせる
+        }
 
         // --- Utils ---
         function formatCurrency(n) { return '¥' + Math.round(n).toLocaleString(); }
