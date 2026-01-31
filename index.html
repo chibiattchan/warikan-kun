@@ -6,7 +6,7 @@
     <title>わりかん君 Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.css">
-    v6<style> 
+    v7<style> 
         
           /* existing imports / base rules ... */
         
@@ -815,7 +815,7 @@
       document.body.style.overflow = '';
       m.classList.add('hidden');
     }, 300);
-  }
+  
         // --- Utils ---
         function formatCurrency(n) { return '¥' + Math.round(n).toLocaleString(); }
         function escapeHtml(s) { return s ? s.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) : ''; }
