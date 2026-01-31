@@ -569,46 +569,107 @@
 
         // --- Details Modal ---
         /* --- replace openExpenseModal / closeExpenseModal implementations --- */
-        function openExpenseModal(id) {
-            const exp = state.expenses.find(e => e.id === id); if (!exp) return;
-            const content = document.getElementById('modalContent');
-            // Build content (keep your existing content generation)
-            content.innerHTML = `<div class="space-y-6">...</div>`; // your existing template
+   // --- Details Modal: 実際のフォームを生成して保存する実装 ---
+   function openExpenseModal(id) {
+    const exp = state.expenses.find(e => e.id === id); if (!exp) return;
+    const content = document.getElementById('modalContent');
 
-            const m = document.getElementById('expenseModal');
-            // Remove hidden (Tailwind) so it becomes display:block
-            m.classList.remove('hidden');
+    content.innerHTML = `
+      <div class="space-y-6">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">項目名</label>
+          <input id="modal_title" type="text" value="${escapeHtml(exp.title || '')}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none" />
+        </div>
 
-            // prevent background scroll while modal open
-            document.body.style.overflow = 'hidden';
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">金額</label>
+          <input id="modal_amount" type="number" inputmode="numeric" min="0" step="1" value="${Number(exp.amount || 0)}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-black text-right outline-none" />
+        </div>
 
-            // ensure bottom-sheet reference
-            const sheet = m.querySelector('.bottom-sheet');
-            // clear any previous state
-            sheet.classList.remove('active');
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">支払者</label>
+          <select id="modal_payer" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none">
+            ${state.members.map(m => `<option value="${m.id}" ${m.id === exp.payerId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+          </select>
+        </div>
 
-            // small delay to allow browser to apply display change, then animate
-            setTimeout(() => sheet.classList.add('active'), 30);
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">分配（Weight）</label>
+          <div id="modal_weights" class="space-y-2">
+            ${state.members.map(m => `
+              <div class="flex items-center justify-between gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <div class="font-bold text-slate-800">${escapeHtml(m.name)}</div>
+                <input data-memberid="${m.id}" type="number" inputmode="numeric" min="0" step="0.1" value="${Number(exp.weights?.[m.id] ?? 0)}" class="inline-edit-input w-28 text-right" />
+              </div>
+            `).join('')}
+          </div>
+        </div>
 
-            lucide.createIcons();
-        }
+        <div class="flex gap-3">
+          <button id="modal_save" class="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold">保存</button>
+          <button id="modal_cancel" class="flex-1 bg-slate-100 py-3 rounded-2xl font-bold">キャンセル</button>
+        </div>
+      </div>
+    `;
 
-        function closeExpenseModal() {
-            const m = document.getElementById('expenseModal');
-            const sheet = m.querySelector('.bottom-sheet');
-            if (!sheet) return;
+    // 表示制御（親の hidden を外し、bottom-sheet を active に）
+    const m = document.getElementById('expenseModal');
+    m.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    const sheet = m.querySelector('.bottom-sheet');
+    sheet.classList.remove('active');
+    // 少し待ってアニメーションを開始
+    setTimeout(() => sheet.classList.add('active'), 20);
 
-            // animate out
-            sheet.classList.remove('active');
+    // イベントバインド
+    document.getElementById('modal_save').onclick = () => {
+      const title = document.getElementById('modal_title').value.trim();
+      const amount = parseFloat(document.getElementById('modal_amount').value) || 0;
+      const payerId = document.getElementById('modal_payer').value;
 
-            // restore body scroll after animation
-            setTimeout(() => {
-            document.body.style.overflow = '';
-            // hide container again (Tailwind hidden)
-            m.classList.add('hidden');
-            }, 280); // CSS トランジションと合わせる
-        }
+      // weights
+      const weightInputs = document.querySelectorAll('#modal_weights input[data-memberid]');
+      weightInputs.forEach(inp => {
+        const mid = inp.dataset.memberid;
+        const val = parseFloat(inp.value);
+        exp.weights[mid] = Math.max(0, isNaN(val) ? 0 : val);
+      });
 
+      exp.title = title;
+      exp.amount = amount;
+      exp.payerId = payerId;
+
+      render();
+      triggerAutoSave();
+      closeExpenseModal();
+    };
+
+    document.getElementById('modal_cancel').onclick = () => {
+      // キャンセル時は新規作成で中身が空のまま来た場合は削除する選択肢は設けてもよいが今は閉じるだけ
+      closeExpenseModal();
+    };
+
+    // フォーカスを項目名へ
+    setTimeout(() => {
+      const t = document.getElementById('modal_title');
+      if (t) t.focus();
+    }, 60);
+
+    lucide.createIcons();
+  }
+
+  function closeExpenseModal() {
+    const m = document.getElementById('expenseModal');
+    if (!m) return;
+    const sheet = m.querySelector('.bottom-sheet');
+    if (sheet) sheet.classList.remove('active');
+
+    // トランジションの長さに合わせて hidden にする
+    setTimeout(() => {
+      document.body.style.overflow = '';
+      m.classList.add('hidden');
+    }, 300);
+  }
         // --- Utils ---
         function formatCurrency(n) { return '¥' + Math.round(n).toLocaleString(); }
         function escapeHtml(s) { return s ? s.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) : ''; }
