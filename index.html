@@ -6,7 +6,7 @@
     <title>わりかん君 Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.css">
-    v1<style>
+    j_addM<style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
       
         body {
@@ -763,15 +763,42 @@
         
         /* Members */
         function addMember(e) {
-        if (e && e.preventDefault) e.preventDefault();
-        const name = prompt('名前：');
-        if (!name || !name.trim()) return;
-        const id = 'm_' + Math.random().toString(36).substr(2, 5);
-        state.members.push({ id, name: name.trim() });
-        state.expenses.forEach(exp => { if (!exp.weights) exp.weights = {}; if (exp.weights[id] === undefined) exp.weights[id] = 1; });
-        render();
-        triggerAutoSave();
-        }
+            if (e && e.preventDefault) e.preventDefault();
+
+            const name = prompt('名前：');
+            if (!name || !name.trim()) return;
+
+            const id = 'm_' + Math.random().toString(36).substr(2, 5);
+            state.members.push({ id, name: name.trim() });
+
+            // 既存の支出に対して新しいメンバーの weight を初期化
+            state.expenses.forEach(exp => {
+                if (!exp.weights) exp.weights = {};
+                if (exp.weights[id] === undefined) exp.weights[id] = 1;
+            });
+
+            // 画面全体を再描画して変更を反映（これで通常は設定画面内の参照も更新される）
+            render();
+
+            // 自動保存をスケジュール
+            triggerAutoSave();
+
+            // --- モーダルや設定画面が開いている場合は、その場で中身を更新する ---
+
+            // メンバー管理モーダルが開いているなら、一覧を再構築（閉じな���）
+            const memberModal = document.getElementById('memberModal');
+            if (memberModal && !memberModal.classList.contains('hidden')) {
+                // openMemberManager は中身を作る＋モーダルを開くので、
+                // 既に開いている場合でも中身の再構築として呼んで問題ありません
+                openMemberManager();
+            }
+
+            // 設定モーダル（config）が独自の renderConfig を持っている場合は呼び出す
+            const configModal = document.getElementById('configModal');
+            if (configModal && !configModal.classList.contains('hidden') && typeof renderConfig === 'function') {
+                try { renderConfig(); } catch (err) { console.warn('renderConfig failed', err); }
+            }
+            }
         
         function openMemberManager() {
         const content = document.getElementById('memberListContent');
