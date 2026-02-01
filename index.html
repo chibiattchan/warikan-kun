@@ -641,270 +641,176 @@
             <div>
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">支払者</label>
                 <select id="modal_payer" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none">
-                ${state.members.map(m => `<option value="${m.id}" ${m.id === exp.payerId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+               ${state.members.map(m => `<option value="${m.id}" ${m.id === exp.payerId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
                 </select>
             </div>
         
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">分配（Weight）</label>
-                <div id="modal_weights" class="space-y-2">
-                ${state.members.map(m => {
-                    const val = Number(exp.weights?.[m.id] ?? 0);
-                    const onClass = val >= 0.95 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600';
-                    const offClass = val <= 0.05 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600';
-                    return `
-                    <div class="flex items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                        <div class="font-bold text-slate-800">${escapeHtml(m.name)}</div>
-                        <div class="flex items-center gap-2">
-                        <div class="flex items-center gap-1">
-                            <button type="button" class="weight-toggle-off px-3 py-1 rounded-full ${offClass}" data-memberid="${m.id}" aria-pressed="${val <= 0.05}">OFF</button>
-                            <button type="button" class="weight-toggle-on px-3 py-1 rounded-full ${onClass}" data-memberid="${m.id}" aria-pressed="${val >= 0.95}">ON</button>
-                        </div>
-                        <div class="flex items-center gap-1 bg-white rounded-md p-1 border border-slate-100">
-                            <button type="button" class="weight-dec px-2 py-1 rounded text-slate-600 bg-slate-100" data-memberid="${m.id}">−</button>
-                            <input data-memberid="${m.id}" class="weight-input w-20 text-right bg-transparent outline-none text-sm font-bold" type="number" step="0.1" min="0" value="${val.toFixed(1)}" />
-                            <button type="button" class="weight-inc px-2 py-1 rounded text-slate-600 bg-slate-100" data-memberid="${m.id}">+</button>
-                        </div>
-                        </div>
-                    </div>
-                    `;
-                }).join('')}
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4 px-1">負担メンバー (ON/OFF)</label>
+                <div class="grid grid-cols-2 gap-3">
+                    ${state.members.map(m => {
+                        const isSelected = (exp.weights?.[m.id] || 0) > 0;
+                        return `
+                        <button onclick="toggleWeightModal('${exp.id}', '${m.id}')" 
+                            class="py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white border-slate-100 text-slate-400'}">
+                            ${escapeHtml(m.name)}
+                        </button>`;
+                    }).join('')}
                 </div>
             </div>
-        
-            <div class="flex gap-3">
-                <button id="modal_save" class="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold">保存</button>
-                <button id="modal_cancel" class="flex-1 bg-slate-100 py-3 rounded-2xl font-bold">キャンセル</button>
-            </div>
+            
+            <button onclick="deleteExpense('${exp.id}'); closeExpenseModal();" class="w-full py-4 text-rose-500 font-bold text-sm hover:bg-rose-50 rounded-2xl transition-colors">
+                この支出を削除する
+            </button>
             </div>
         `;
-        
-        const mEl = document.getElementById('expenseModal');
-        if (!mEl) return;
-        mEl.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-        const sheet = mEl.querySelector('.bottom-sheet');
-        if (sheet) { sheet.classList.remove('active'); setTimeout(() => sheet.classList.add('active'), 20); }
-        
-        // weight helpers
-        function refreshWeightControls(memberId, value) {
-            const input = document.querySelector(`#modal_weights input.weight-input[data-memberid="${memberId}"]`);
-            if (input) input.value = value.toFixed(1);
-            const onBtn = document.querySelector(`#modal_weights .weight-toggle-on[data-memberid="${memberId}"]`);
-            const offBtn = document.querySelector(`#modal_weights .weight-toggle-off[data-memberid="${memberId}"]`);
-            if (onBtn) {
-            if (value >= 0.95) { onBtn.classList.add('bg-indigo-600','text-white'); onBtn.classList.remove('bg-slate-100','text-slate-600'); onBtn.setAttribute('aria-pressed','true'); }
-            else { onBtn.classList.remove('bg-indigo-600','text-white'); onBtn.classList.add('bg-slate-100','text-slate-600'); onBtn.setAttribute('aria-pressed','false'); }
-            }
-            if (offBtn) {
-            if (value <= 0.05) { offBtn.classList.add('bg-indigo-600','text-white'); offBtn.classList.remove('bg-slate-100','text-slate-600'); offBtn.setAttribute('aria-pressed','true'); }
-            else { offBtn.classList.remove('bg-indigo-600','text-white'); offBtn.classList.add('bg-slate-100','text-slate-600'); offBtn.setAttribute('aria-pressed','false'); }
-            }
-        }
-        
-        function setWeightAndRefresh(memberId, rawValue) {
-            const v = Math.round(Math.max(0, rawValue) * 10) / 10;
-            exp.weights = exp.weights || {};
-            exp.weights[memberId] = v;
-        
-            triggerAutoSave();
-            refreshWeightControls(memberId, v);
-        
-            // minimal dashboard updates
-            const calc = calculate();
-            const totalEl = document.getElementById('totalAmount');
-            if (totalEl) totalEl.innerText = formatCurrency(calc.total);
-        
-            const summaryBody = document.getElementById('memberSummaryTable');
-            if (summaryBody) {
-            summaryBody.innerHTML = '';
-            state.members.forEach(m => {
-                const b = calc.balances[m.id] || { paid: 0, should: 0, diff: 0 };
-                const balanceColor = b.diff > 0.1 ? 'text-indigo-600' : (b.diff < -0.1 ? 'text-rose-500' : 'text-slate-400');
-                const balanceIcon = b.diff > 0.1 ? '+' : '';
-                const tr = document.createElement('tr');
-                tr.className = "font-bold text-slate-700";
-                tr.innerHTML = `
-                <td class="p-4 font-black text-slate-800">${escapeHtml(m.name)}</td>
-                <td class="p-4 text-right">${formatCurrency(b.paid)}</td>
-                <td class="p-4 text-right text-slate-400 font-medium">${formatCurrency(b.should)}</td>
-                <td class="p-4 text-right font-black italic text-lg ${balanceColor}">${balanceIcon}${formatCurrency(b.diff)}</td>
-                `;
-                summaryBody.appendChild(tr);
-            });
-            }
-        
-            renderSettlementPlan(calc);
-        
-        // attach event listeners
-        document.querySelectorAll('#modal_weights .weight-toggle-on').forEach(btn => btn.addEventListener('click', () => setWeightAndRefresh(btn.dataset.memberid, 1)));
-        document.querySelectorAll('#modal_weights .weight-toggle-off').forEach(btn => btn.addEventListener('click', () => setWeightAndRefresh(btn.dataset.memberid, 0)));
-        document.querySelectorAll('#modal_weights .weight-inc').forEach(btn => btn.addEventListener('click', () => {
-            const mid = btn.dataset.memberid;
-            const cur = parseFloat(document.querySelector(`#modal_weights input.weight-input[data-memberid="${mid}"]`).value) || 0;
-            setWeightAndRefresh(mid, cur + 0.1);
-        }));
-        document.querySelectorAll('#modal_weights .weight-dec').forEach(btn => btn.addEventListener('click', () => {
-            const mid = btn.dataset.memberid;
-            const cur = parseFloat(document.querySelector(`#modal_weights input.weight-input[data-memberid="${mid}"]`).value) || 0;
-            setWeightAndRefresh(mid, Math.max(0, cur - 0.1));
-        }));
-        document.querySelectorAll('#modal_weights input.weight-input').forEach(inp => {
-            inp.addEventListener('input', () => {
-            const mid = inp.dataset.memberid;
-            let val = parseFloat(inp.value); if (isNaN(val)) val = 0;
-            setWeightAndRefresh(mid, val);
-            });
-            inp.addEventListener('blur', () => {
-            const mid = inp.dataset.memberid;
-            const v = parseFloat(inp.value);
-            setWeightAndRefresh(mid, isNaN(v) ? 0 : v);
-            });
-        });
-        
-        // save/cancel
-        const saveBtn = document.getElementById('modal_save');
-        if (saveBtn) saveBtn.onclick = () => {
-            const title = (document.getElementById('modal_title') || {}).value || '';
-            const amount = parseFloat((document.getElementById('modal_amount') || {}).value) || 0;
-            const payerId = (document.getElementById('modal_payer') || {}).value || exp.payerId;
-            exp.title = title.trim();
-            exp.amount = amount;
-            exp.payerId = payerId;
+
+        // リアルタイム反映のためのイベントリスナー
+        const tIn = document.getElementById('modal_title');
+        const aIn = document.getElementById('modal_amount');
+        const pIn = document.getElementById('modal_payer');
+
+        const updateAll = () => {
+            exp.title = tIn.value;
+            exp.amount = parseFloat(aIn.value) || 0;
+            exp.payerId = pIn.value;
             render();
             triggerAutoSave();
-            closeExpenseModal();
         };
-        const cancelBtn = document.getElementById('modal_cancel');
-        if (cancelBtn) cancelBtn.onclick = () => closeExpenseModal();
-        
-        // sync initial toggle states
-        state.members.forEach(m => {
-            const v = Number(exp.weights?.[m.id] ?? 0);
-            refreshWeightControls(m.id, v);
-        });
-        
-        setTimeout(() => {
-            const t = document.getElementById('modal_title');
-            if (t) t.focus();
-        }, 60);
-        
-        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+
+        tIn.oninput = updateAll;
+        aIn.oninput = updateAll;
+        pIn.onchange = updateAll;
+
+        document.getElementById('expenseModal').classList.add('active');
+        document.getElementById('expenseModal').style.display = 'block';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function toggleWeightModal(expId, memberId) {
+        const exp = state.expenses.find(e => e.id === expId);
+        if (!exp) return;
+        exp.weights = exp.weights || {};
+        exp.weights[memberId] = (exp.weights[memberId] > 0) ? 0 : 1;
+        render();
+        openExpenseModal(expId); // UI再描画
+        triggerAutoSave();
+    }
+
+    function closeExpenseModal() {
+        document.getElementById('expenseModal').classList.remove('active');
+        setTimeout(() => { document.getElementById('expenseModal').style.display = 'none'; }, 300);
+    }
+
+    /* メンバー管理 */
+    function openMemberManager() {
+        renderMemberList();
+        document.getElementById('memberModal').classList.add('active');
+        document.getElementById('memberModal').style.display = 'block';
+    }
+
+    function closeMemberModal() {
+        document.getElementById('memberModal').classList.remove('active');
+        setTimeout(() => { document.getElementById('memberModal').style.display = 'none'; }, 300);
+    }
+
+    function renderMemberList() {
+        const container = document.getElementById('memberListContent');
+        container.innerHTML = state.members.map(m => `
+            <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                <input type="text" value="${escapeHtml(m.name)}" onchange="updateMemberName('${m.id}', this.value)" 
+                    class="flex-1 bg-transparent border-none font-bold text-slate-800 outline-none focus:ring-0" />
+                <button onclick="removeMember('${m.id}')" class="p-2 text-slate-300 hover:text-rose-500"><i data-lucide="trash-2" size="18"></i></button>
+            </div>
+        `).join('');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function addMember(e) {
+        if (e) e.preventDefault();
+        const id = 'm_' + Math.random().toString(36).substr(2, 9);
+        state.members.push({ id, name: '新規メンバー' });
+        render();
+        if (document.getElementById('memberModal').classList.contains('active')) {
+            renderMemberList();
+        } else {
+            openMemberManager();
         }
-        
-        function closeExpenseModal() {
-        const m = document.getElementById('expenseModal');
-        if (!m) return;
-        m.querySelector('.bottom-sheet')?.classList.remove('active');
-        setTimeout(() => {
-            document.body.style.overflow = '';
-            m.classList.add('hidden');
-        }, 300);
-        }
-        
-        /* Members */
-        function addMember(e) {
-            if (e && e.preventDefault) e.preventDefault();
+        triggerAutoSave();
+    }
 
-            const name = prompt('名前：');
-            if (!name || !name.trim()) return;
-
-            const id = 'm_' + Math.random().toString(36).substr(2, 5);
-            state.members.push({ id, name: name.trim() });
-
-            // 既存の支出に対して新しいメンバーの weight を初期化
-            state.expenses.forEach(exp => {
-                if (!exp.weights) exp.weights = {};
-                if (exp.weights[id] === undefined) exp.weights[id] = 1;
-            });
-
-            // 画面全体を再描画して変更を反映（これで通常は設定画面内の参照も更新される）
-            render();
-
-            // 自動保存をスケジュール
-            triggerAutoSave();
-
-            // --- モーダルや設定画面が開いている場合は、その場で中身を更新する ---
-
-            // メンバー管理モーダルが開いているなら、一覧を再構築（閉じな���）
-            const memberModal = document.getElementById('memberModal');
-            if (memberModal && !memberModal.classList.contains('hidden')) {
-                // openMemberManager は中身を作る＋モーダルを開くので、
-                // 既に開いている場合でも中身の再構築として呼んで問題ありません
-                openMemberManager();
-            }
-
-            // 設定モーダル（config）が独自の renderConfig を持っている場合は呼び出す
-            const configModal = document.getElementById('configModal');
-            if (configModal && !configModal.classList.contains('hidden') && typeof renderConfig === 'function') {
-                try { renderConfig(); } catch (err) { console.warn('renderConfig failed', err); }
-            }
-            }
-        
-        function openMemberManager() {
-        const content = document.getElementById('memberListContent');
-        if (!content) return;
-        content.innerHTML = state.members.length === 0 ? '<p class="text-center py-10 text-slate-400 italic">なし</p>' : '';
-        state.members.forEach(m => {
-            const div = document.createElement('div'); div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100";
-            div.innerHTML = `<span class="font-bold text-slate-800">${escapeHtml(m.name)}</span><div class="flex items-center gap-2"><button onclick="deleteMember('${m.id}')" class="p-2 text-slate-400 hover:text-rose-500 bg-white rounded-xl shadow-sm border border-slate-200"><i data-lucide="trash-2" size="16"></i></button></div>`;
-            content.appendChild(div);
-        });
-        const modal = document.getElementById('memberModal'); modal.classList.remove('hidden');
-        setTimeout(() => modal.querySelector('.bottom-sheet').classList.add('active'), 10);
-        lucide.createIcons();
-        }
-        
-        function deleteMember(id) {
-        if (!confirm('メンバーを削除しますか？（過去の記録にも影響します）')) return;
-        state.members = state.members.filter(m => m.id !== id);
-        state.expenses.forEach(exp => { if (exp.weights) delete exp.weights[id]; });
+    function updateMemberName(id, name) {
+        const m = state.members.find(m => m.id === id);
+        if (m) m.name = name;
         render();
         triggerAutoSave();
-        openMemberManager();
-        }
-        
-        function closeMemberModal() {
-        const m = document.getElementById('memberModal');
-        if (!m) return;
-        m.querySelector('.bottom-sheet')?.classList.remove('active');
-        setTimeout(() => m.classList.add('hidden'), 300);
-        }
-        
-        /* Sync / Helpers */
-        function triggerAutoSave() {
-        if (autoSaveTimer) clearTimeout(autoSaveTimer);
-        autoSaveTimer = setTimeout(() => saveToCloud(), 2000);
-        }
-        
-        async function fetchData() {
-        if (!gasUrl) return;
-        setSyncing(true);
-        try {
-            const r = await fetch(`${gasUrl}?action=get&projectId=${state.projectId}`);
-            const j = await r.json();
-            if (j.ok && j.data) { state = j.data; render(); }
-        } catch(e) {}
-        setSyncing(false);
-        }
-        
-        async function saveToCloud() {
-        if (!gasUrl) return;
-        setSyncing(true);
-        try {
-            await fetch(gasUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'save', projectId: state.projectId, payload: state, projectName: state.title }) });
-        } catch(e) {}
-        setSyncing(false);
-        }
-        
-        function setSyncing(s) { const b = document.getElementById('syncBtn'); if (!b) return; const i = b.querySelector('i'); if (!i) return; if (s) i.classList.add('animate-spin'); else i.classList.remove('animate-spin'); }
-        
-        function copyShareUrl() {
-        const u = new URL(window.location.href);
-        u.searchParams.set('pid', state.projectId);
-        const t = document.createElement("input"); document.body.appendChild(t); t.value = u.toString(); t.select(); document.execCommand("copy"); document.body.removeChild(t); alert("共有用URLをコピーしました！");
-        }
-        </script>
+    }
 
+    function removeMember(id) {
+        if (!confirm('メンバーを削除しますか？関連する支出の負担分も削除されます。')) return;
+        state.members = state.members.filter(m => m.id !== id);
+        render();
+        renderMemberList();
+        triggerAutoSave();
+    }
+
+    /* 設定・保存 */
+    function toggleConfig() {
+        const m = document.getElementById('configModal');
+        m.classList.toggle('hidden');
+    }
+
+    function saveConfig() {
+        const url = document.getElementById('gasUrlInput').value;
+        localStorage.setItem('fair_share_gas_url_v3', url);
+        gasUrl = url;
+        alert('設定を保存しました');
+        toggleConfig();
+        if (gasUrl) fetchData();
+    }
+
+    function triggerAutoSave() {
+        if (autoSaveTimer) clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => {
+            if (gasUrl) syncData();
+        }, 2000);
+    }
+
+    async function fetchData() {
+        if (!gasUrl) return;
+        try {
+            const res = await fetch(`${gasUrl}?pid=${state.projectId}`);
+            const data = await res.json();
+            if (data && data.members) {
+                state = data;
+                render();
+            }
+        } catch (e) { console.error("Fetch error:", e); }
+    }
+
+    async function syncData() {
+        if (!gasUrl) return;
+        try {
+            await fetch(gasUrl, {
+                method: 'POST',
+                body: JSON.stringify(state)
+            });
+        } catch (e) { console.error("Sync error:", e); }
+    }
+
+    function copyShareUrl() {
+        const url = window.location.origin + window.location.pathname + '?pid=' + state.projectId;
+        navigator.clipboard.writeText(url).then(() => alert('共有用URLをコピーしました！'));
+    }
+
+    function updateExpData(id, field, val) {
+        const exp = state.expenses.find(e => e.id === id);
+        if (exp) {
+            exp[field] = (field === 'amount') ? (parseFloat(val) || 0) : val;
+            render();
+            triggerAutoSave();
+        }
+    }
+</script>
 </body>
 </html>
