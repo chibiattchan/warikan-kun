@@ -4,23 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>優秀わりかん君</title>
-    all<script src="https://cdn.tailwindcss.com"></script>
+    all2<script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .inline-edit-input { @apply w-full bg-indigo-50 border-2 border-indigo-400 rounded px-1 font-bold text-slate-900 outline-none; }
         .bottom-sheet {
             transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease;
             transform: translateY(100%); opacity: 0;
             position: fixed; left: 0; right: 0; z-index: 1200; pointer-events: none;
         }
         @media (min-width: 640px) {
-            .bottom-sheet { left: 50%; top: 50%; width: min(720px, calc(100% - 48px)); transform: translate(-50%, -60%) scale(0.98); border-radius: 1.25rem; max-height: 90vh; overflow: auto; padding: 1.5rem; }
+            .bottom-sheet { left: 50%; top: 50%; width: min(720px, calc(100% - 48px)); transform: translate(-50%, -60%) scale(0.98); border-radius: 2rem; max-height: 90vh; overflow: auto; padding: 2rem; }
             .bottom-sheet.active { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
         }
         @media (max-width: 639px) {
-            .bottom-sheet { left: 0; right: 0; bottom: 0; border-top-left-radius: 1.25rem; border-top-right-radius: 1.25rem; max-height: 92vh; overflow-y: auto; }
+            .bottom-sheet { left: 0; right: 0; bottom: 0; border-top-left-radius: 2rem; border-top-right-radius: 2rem; max-height: 92vh; overflow-y: auto; }
             .bottom-sheet.active { transform: translateY(0); opacity: 1; pointer-events: auto; }
         }
     </style>
@@ -36,7 +35,7 @@
             </div>
         </div>
         <div class="flex items-center gap-1">
-            <button onclick="toggleConfig()" id="syncBtn" class="p-2 rounded-xl text-slate-400 hover:bg-slate-100 transition-all"><i data-lucide="refresh-cw" size="20"></i></button>
+            <button onclick="toggleConfig()" class="p-2 rounded-xl text-slate-400 hover:bg-slate-100 transition-all"><i data-lucide="settings" size="20"></i></button>
             <button onclick="copyShareUrl()" class="p-2 text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors"><i data-lucide="share-2" size="20"></i></button>
         </div>
     </header>
@@ -60,9 +59,8 @@
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1">
                             <span id="memberCount" class="text-xl font-black text-slate-800">0人</span>
-                            <button onclick="openMemberManager()" class="text-indigo-400 p-2"><i data-lucide="settings" size="16"></i></button>
                         </div>
-                        <button onclick="addMember(event)" class="w-10 h-10 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-xl"><i data-lucide="user-plus" size="20"></i></button>
+                        <button onclick="openMemberManager()" class="w-10 h-10 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100"><i data-lucide="users" size="20"></i></button>
                     </div>
                 </div>
             </div>
@@ -81,25 +79,25 @@
         <div id="view-list" class="hidden space-y-8">
             <div class="bg-white rounded-3xl border border-slate-200 overflow-x-auto shadow-xl no-scrollbar">
                 <table class="w-full text-sm min-w-[800px] border-collapse">
-                    <thead><tr id="fullTableHeadRow" class="bg-slate-50 border-b border-slate-100"></tr></thead>
+                    <thead><tr id="fullTableHeadRow" class="bg-slate-50 border-b border-slate-100 text-left"></tr></thead>
                     <tbody id="fullExpensesTable" class="divide-y divide-slate-50"></tbody>
                 </table>
             </div>
             <div id="memberSummaryTableContainer" class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-lg">
-                <table class="w-full text-sm border-collapse">
-                    <thead><tr class="bg-slate-50 border-b border-slate-100"><th class="p-4 text-left font-black text-slate-400 text-[10px] uppercase">メンバー</th><th class="p-4 text-right font-black text-slate-400 text-[10px] uppercase">支払済</th><th class="p-4 text-right font-black text-slate-400 text-[10px] uppercase">負担分</th><th class="p-4 text-right font-black text-slate-400 text-[10px] uppercase">差額</th></tr></thead>
+                <table class="w-full text-sm border-collapse text-left">
+                    <thead><tr class="bg-slate-50 border-b border-slate-100 font-black text-slate-400 text-[10px] uppercase"><th class="p-4">メンバー</th><th class="p-4 text-right">支払済</th><th class="p-4 text-right">負担分</th><th class="p-4 text-right">差額</th></tr></thead>
                     <tbody id="memberSummaryTable" class="divide-y divide-slate-50"></tbody>
                 </table>
             </div>
         </div>
     </main>
 
-    <button id="floatingAddBtn" onclick="createNewExpense(event)" class="fixed bottom-8 right-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center z-[60] active:scale-95 transition-all"><i data-lucide="plus" size="32"></i></button>
+    <button id="floatingAddBtn" onclick="createNewExpense(event)" class="fixed bottom-8 right-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center z-[60] active:scale-95 transition-all hover:bg-indigo-700"><i data-lucide="plus" size="32"></i></button>
 
     <div id="expenseModal" class="fixed inset-0 z-[100] hidden">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeExpenseModal()"></div>
-        <div class="bottom-sheet fixed inset-x-0 bottom-0 w-full bg-white p-6 max-h-[92vh] overflow-y-auto no-scrollbar">
-            <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-black text-slate-800">詳細編集</h3><button onclick="closeExpenseModal()" class="p-2 bg-slate-100 rounded-full"><i data-lucide="x" size="20"></i></button></div>
+        <div class="bottom-sheet fixed inset-x-0 bottom-0 w-full bg-white p-6 max-h-[92vh] overflow-y-auto no-scrollbar shadow-2xl">
+            <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-black text-slate-800">支出の編集</h3><button onclick="closeExpenseModal()" class="p-2 bg-slate-100 rounded-full"><i data-lucide="x" size="20"></i></button></div>
             <div id="modalContent" class="space-y-6 pb-10"></div>
         </div>
     </div>
@@ -109,7 +107,7 @@
         <div class="bottom-sheet fixed inset-x-0 bottom-0 w-full bg-white p-6 max-h-[80vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-black text-slate-800">メンバー管理</h3><button onclick="closeMemberModal()" class="p-2 bg-slate-100 rounded-full"><i data-lucide="x" size="20"></i></button></div>
             <div id="memberListContent" class="space-y-4 mb-6"></div>
-            <button onclick="addMember(event)" class="w-full bg-indigo-50 text-indigo-600 py-4 rounded-2xl font-bold">メンバーを追加</button>
+            <button onclick="addMember(event)" class="w-full bg-indigo-50 text-indigo-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2"><i data-lucide="user-plus" size="20"></i> メンバーを追加</button>
         </div>
     </div>
 
@@ -117,8 +115,9 @@
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onclick="toggleConfig()"></div>
         <div class="relative w-full max-w-md bg-white rounded-[2rem] p-8">
             <h2 class="text-2xl font-black text-slate-800 mb-2">同期設定</h2>
-            <input id="gasUrlInput" type="url" placeholder="GAS URL" class="w-full bg-slate-50 border-2 rounded-2xl px-4 py-4 mb-6">
-            <button onclick="saveConfig()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black">設定を保存</button>
+            <p class="text-xs text-slate-400 mb-6 font-bold">Google Apps ScriptのURLを入力してください</p>
+            <input id="gasUrlInput" type="url" placeholder="https://script.google.com/..." class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-4 mb-6 font-bold outline-none focus:border-indigo-500 transition-colors">
+            <button onclick="saveConfig()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-indigo-200">設定を保存</button>
         </div>
     </div>
 
@@ -137,37 +136,13 @@
             const cached = localStorage.getItem('fs_cache_' + pid);
             if (cached) try { state = JSON.parse(cached); } catch (e) {}
             document.getElementById('projectTitle').value = state.title || '新しい旅行';
-            document.getElementById('projectTitle').addEventListener('input', (e) => { state.title = e.target.value; triggerAutoSave(); });
+            document.getElementById('projectTitle').oninput = (e) => { state.title = e.target.value; triggerAutoSave(); };
             render();
             if (gasUrl) fetchData();
         };
 
         function formatCurrency(n) { return '¥' + Math.round(n).toLocaleString(); }
         function escapeHtml(s) { return s ? s.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) : ''; }
-
-        function renderSettlementPlan(calculation) {
-            const planContainer = document.getElementById('settlementPlan');
-            if (!planContainer) return;
-            planContainer.innerHTML = '';
-            if (!calculation || !calculation.plan || calculation.plan.length === 0) {
-                planContainer.innerHTML = `<div class="bg-indigo-50 border-2 border-indigo-200 rounded-3xl p-6 text-center font-black text-indigo-600">精算は不要です✨</div>`;
-                return;
-            }
-            const wrapper = document.createElement('div');
-            wrapper.className = 'space-y-4';
-            calculation.plan.forEach(p => {
-                const card = document.createElement('div');
-                card.className = 'bg-indigo-50 border-2 border-indigo-200 rounded-3xl p-4 flex items-center justify-between gap-4';
-                card.innerHTML = `
-                    <div class="flex-1 min-w-0"><div class="text-[9px] font-black text-slate-400 uppercase">支払う</div><div class="font-black text-slate-900 truncate">${escapeHtml(p.fromName)}</div></div>
-                    <div class="flex items-center gap-2"><i data-lucide="arrow-right" class="text-indigo-600" size="16"></i><div class="text-xl font-black text-slate-900">${formatCurrency(p.amount)}</div></div>
-                    <div class="flex-1 text-right min-w-0"><div class="text-[9px] font-black text-slate-400 uppercase">受取る</div><div class="font-black text-slate-900 truncate">${escapeHtml(p.toName)}</div></div>
-                `;
-                wrapper.appendChild(card);
-            });
-            planContainer.appendChild(wrapper);
-            if (window.lucide) lucide.createIcons();
-        }
 
         function calculate() {
             const balances = {};
@@ -212,7 +187,7 @@
             state.expenses.slice(0,5).forEach(exp => {
                 const pName = (state.members.find(m => m.id === exp.payerId) || {}).name || '-';
                 const div = document.createElement('div');
-                div.className = "bg-white p-4 rounded-2xl border border-slate-200 flex justify-between cursor-pointer active:scale-95 transition-all";
+                div.className = "bg-white p-4 rounded-2xl border border-slate-200 flex justify-between cursor-pointer active:scale-95 transition-all shadow-sm";
                 div.onclick = () => openExpenseModal(exp.id);
                 div.innerHTML = `<div><div class="font-bold text-slate-800">${escapeHtml(exp.title || '無題')}</div><div class="text-[10px] text-slate-400 font-black">${escapeHtml(pName)} 支払</div></div><div class="text-lg font-black italic">${formatCurrency(exp.amount)}</div>`;
                 recent.appendChild(div);
@@ -221,12 +196,12 @@
             const tableBody = document.getElementById('fullExpensesTable');
             const headRow = document.getElementById('fullTableHeadRow');
             if (tableBody && headRow) {
-                headRow.innerHTML = `<th class="p-4 text-left">項目</th><th class="p-4 text-left">支払者</th><th class="p-4 text-right">金額</th>${state.members.map(m => `<th class="p-4 text-center">${escapeHtml(m.name)}</th>`).join('')}<th></th>`;
+                headRow.innerHTML = `<th class="p-4">項目</th><th class="p-4">支払者</th><th class="p-4 text-right">金額</th>${state.members.map(m => `<th class="p-4 text-center">${escapeHtml(m.name)}</th>`).join('')}<th></th>`;
                 tableBody.innerHTML = '';
                 state.expenses.forEach(exp => {
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td class="p-4 font-bold">${escapeHtml(exp.title)}</td><td class="p-4 text-indigo-600 font-bold">${escapeHtml(state.members.find(m=>m.id===exp.payerId)?.name)}</td><td class="p-4 text-right font-black">${formatCurrency(exp.amount)}</td>${state.members.map(m => `<td class="p-4 text-center ${exp.weights?.[m.id]>0?'bg-indigo-50 text-indigo-600 font-black':'text-slate-200'}">${exp.weights?.[m.id]>0?'✔':''}</td>`).join('')}<td class="p-4"><button onclick="deleteExpense('${exp.id}')" class="text-slate-300">🗑</button></td>`;
-                    tr.onclick = () => openExpenseModal(exp.id);
+                    tr.className = "hover:bg-slate-50 transition-colors cursor-pointer";
+                    tr.innerHTML = `<td class="p-4 font-bold" onclick="openExpenseModal('${exp.id}')">${escapeHtml(exp.title)}</td><td class="p-4 text-indigo-600 font-bold" onclick="openExpenseModal('${exp.id}')">${escapeHtml(state.members.find(m=>m.id===exp.payerId)?.name)}</td><td class="p-4 text-right font-black" onclick="openExpenseModal('${exp.id}')">${formatCurrency(exp.amount)}</td>${state.members.map(m => `<td class="p-4 text-center ${exp.weights?.[m.id]>0?'bg-indigo-50 text-indigo-600 font-black':'text-slate-200'}" onclick="toggleWeight('${exp.id}','${m.id}')">${exp.weights?.[m.id]>0? (exp.weights[m.id] > 1 ? exp.weights[m.id] : '✔') :''}</td>`).join('')}<td class="p-4 text-right"><button onclick="deleteExpense('${exp.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i data-lucide="trash-2" size="16"></i></button></td>`;
                     tableBody.appendChild(tr);
                 });
             }
@@ -237,7 +212,19 @@
                 return `<tr class="font-bold"><td class="p-4 font-black">${escapeHtml(m.name)}</td><td class="p-4 text-right">${formatCurrency(b.paid)}</td><td class="p-4 text-right text-slate-400">${formatCurrency(b.should)}</td><td class="p-4 text-right font-black ${b.diff>0?'text-indigo-600':'text-rose-500'}">${b.diff>0?'+':''}${formatCurrency(b.diff)}</td></tr>`;
             }).join('');
 
-            renderSettlementPlan(calc);
+            const planContainer = document.getElementById('settlementPlan');
+            if (calc.plan.length === 0) {
+                planContainer.innerHTML = `<div class="bg-indigo-50 border-2 border-indigo-200 rounded-3xl p-6 text-center font-black text-indigo-600">精算は不要です✨</div>`;
+            } else {
+                planContainer.innerHTML = calc.plan.map(p => `
+                    <div class="bg-indigo-50 border-2 border-indigo-200 rounded-3xl p-4 mb-3 flex items-center justify-between gap-4">
+                        <div class="flex-1 min-w-0 text-left"><div class="text-[9px] font-black text-slate-400 uppercase">支払う</div><div class="font-black text-slate-900 truncate">${escapeHtml(p.fromName)}</div></div>
+                        <div class="flex items-center gap-2 text-indigo-600"><i data-lucide="arrow-right" size="16"></i><div class="text-xl font-black text-slate-900">${formatCurrency(p.amount)}</div></div>
+                        <div class="flex-1 text-right min-w-0"><div class="text-[9px] font-black text-slate-400 uppercase">受取る</div><div class="font-black text-slate-900 truncate">${escapeHtml(p.toName)}</div></div>
+                    </div>
+                `).join('');
+            }
+
             localStorage.setItem('fs_cache_' + state.projectId, JSON.stringify(state));
             if (window.lucide) lucide.createIcons();
         }
@@ -248,11 +235,35 @@
             const content = document.getElementById('modalContent');
             content.innerHTML = `
                 <div class="space-y-6">
-                    <div><label class="text-[10px] font-black text-slate-400 block mb-2 uppercase">項目名</label><input id="modal_title" type="text" value="${escapeHtml(exp.title)}" class="w-full bg-slate-50 border-2 rounded-2xl px-4 py-3 font-bold outline-none"></div>
-                    <div><label class="text-[10px] font-black text-slate-400 block mb-2 uppercase">金額</label><input id="modal_amount" type="number" value="${exp.amount}" class="w-full bg-slate-50 border-2 rounded-2xl px-4 py-3 font-black text-right outline-none"></div>
-                    <div><label class="text-[10px] font-black text-slate-400 block mb-2 uppercase">支払者</label><select id="modal_payer" class="w-full bg-slate-50 border-2 rounded-2xl px-4 py-3 font-bold">${state.members.map(m=>`<option value="${m.id}" ${m.id===exp.payerId?'selected':''}>${escapeHtml(m.name)}</option>`).join('')}</select></div>
-                    <div><label class="text-[10px] font-black text-slate-400 block mb-4 uppercase tracking-widest">負担する人</label><div class="grid grid-cols-2 gap-3">${state.members.map(m => `<button onclick="toggleWeight('${exp.id}','${m.id}')" class="py-3 px-4 rounded-2xl font-bold border-2 ${exp.weights?.[m.id]>0?'bg-indigo-600 border-indigo-600 text-white shadow-lg':'bg-white border-slate-100 text-slate-400'}">${escapeHtml(m.name)}</button>`).join('')}</div></div>
-                    <button onclick="deleteExpense('${exp.id}');closeExpenseModal();" class="w-full py-4 text-rose-500 font-bold">この支出を削除</button>
+                    <div><label class="text-[10px] font-black text-slate-400 block mb-2 uppercase">項目名</label><input id="modal_title" type="text" value="${escapeHtml(exp.title)}" placeholder="例：タクシー代" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 font-bold outline-none focus:border-indigo-500 transition-colors"></div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 block mb-2 uppercase">金額</label>
+                        <div class="flex gap-2 mb-3">
+                            <button onclick="addAmount('${exp.id}', 1000)" class="flex-1 bg-indigo-50 text-indigo-600 py-3 rounded-xl font-bold text-xs hover:bg-indigo-100">+1,000</button>
+                            <button onclick="addAmount('${exp.id}', 5000)" class="flex-1 bg-indigo-50 text-indigo-600 py-3 rounded-xl font-bold text-xs hover:bg-indigo-100">+5,000</button>
+                            <button onclick="addAmount('${exp.id}', 10000)" class="flex-1 bg-indigo-50 text-indigo-600 py-3 rounded-xl font-bold text-xs hover:bg-indigo-100">+10,000</button>
+                        </div>
+                        <input id="modal_amount" type="number" value="${exp.amount}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 font-black text-right text-xl outline-none focus:border-indigo-500 transition-colors">
+                    </div>
+                    <div><label class="text-[10px] font-black text-slate-400 block mb-2 uppercase">支払者</label><select id="modal_payer" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 font-bold outline-none appearance-none">${state.members.map(m=>`<option value="${m.id}" ${m.id===exp.payerId?'selected':''}>${escapeHtml(m.name)}</option>`).join('')}</select></div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 block mb-4 uppercase tracking-widest">負担する人（Weight）</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            ${state.members.map(m => `
+                                <div class="flex flex-col gap-1">
+                                    <button onclick="toggleWeight('${exp.id}','${m.id}')" class="py-3 px-4 rounded-2xl font-bold border-2 transition-all ${exp.weights?.[m.id]>0?'bg-indigo-600 border-indigo-600 text-white shadow-lg':'bg-white border-slate-100 text-slate-400'}">
+                                        ${escapeHtml(m.name)}
+                                    </button>
+                                    <div class="flex items-center justify-center gap-2 ${exp.weights?.[m.id]>0?'opacity-100':'opacity-0'}">
+                                        <button onclick="changeWeight('${exp.id}','${m.id}',-1)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200">ー</button>
+                                        <span class="font-black text-xs text-slate-600">${exp.weights?.[m.id] || 0}</span>
+                                        <button onclick="changeWeight('${exp.id}','${m.id}',1)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200">＋</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <button onclick="deleteExpense('${exp.id}');closeExpenseModal();" class="w-full py-4 text-rose-500 font-bold text-sm hover:bg-rose-50 rounded-2xl transition-colors">この支出を削除する</button>
                 </div>
             `;
             const updateAll = () => { exp.title = document.getElementById('modal_title').value; exp.amount = parseFloat(document.getElementById('modal_amount').value) || 0; exp.payerId = document.getElementById('modal_payer').value; render(); triggerAutoSave(); };
@@ -265,22 +276,24 @@
             setTimeout(() => modal.querySelector('.bottom-sheet').classList.add('active'), 10);
         }
 
+        function addAmount(id, val) { const exp = state.expenses.find(e=>e.id===id); exp.amount = (parseFloat(exp.amount)||0) + val; render(); openExpenseModal(id); triggerAutoSave(); }
         function toggleWeight(expId, mId) { const exp = state.expenses.find(e=>e.id===expId); exp.weights[mId] = exp.weights[mId] > 0 ? 0 : 1; render(); openExpenseModal(expId); triggerAutoSave(); }
+        function changeWeight(expId, mId, diff) { const exp = state.expenses.find(e=>e.id===expId); exp.weights[mId] = Math.max(0, (exp.weights[mId] || 0) + diff); render(); openExpenseModal(expId); triggerAutoSave(); }
         function closeExpenseModal() { const sheet = document.getElementById('expenseModal').querySelector('.bottom-sheet'); sheet.classList.remove('active'); setTimeout(() => document.getElementById('expenseModal').classList.add('hidden'), 300); }
-        function switchTab(t) { document.getElementById('view-input').classList.toggle('hidden', t!=='input'); document.getElementById('view-list').classList.toggle('hidden', t!=='list'); const bI=document.getElementById('tab-input'), bL=document.getElementById('tab-list'), active="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg", inactive="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50"; bI.className = t==='input'?active:inactive; bL.className = t==='list'?active:inactive; }
-        function createNewExpense(e) { if(state.members.length===0) return addMember(e); const id='e_'+Math.random().toString(36).substr(2,9), weights={}; state.members.forEach(m=>weights[m.id]=1); state.expenses.unshift({id, title:'', amount:0, payerId:state.members[0].id, weights}); render(); openExpenseModal(id); }
-        function deleteExpense(id) { if(!confirm('削除しますか？')) return; state.expenses = state.expenses.filter(e=>e.id!==id); render(); triggerAutoSave(); }
+        function switchTab(t) { document.getElementById('view-input').classList.toggle('hidden', t!=='input'); document.getElementById('view-list').classList.toggle('hidden', t!=='list'); const bI=document.getElementById('tab-input'), bL=document.getElementById('tab-list'), active="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-200", inactive="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50"; bI.className = t==='input'?active:inactive; bL.className = t==='list'?active:inactive; }
+        function createNewExpense(e) { if(state.members.length===0) return openMemberManager(); const id='e_'+Math.random().toString(36).substr(2,9), weights={}; state.members.forEach(m=>weights[m.id]=1); state.expenses.unshift({id, title:'', amount:0, payerId:state.members[0].id, weights}); render(); openExpenseModal(id); }
+        function deleteExpense(id) { if(!confirm('この支出を削除してもよろしいですか？')) return; state.expenses = state.expenses.filter(e=>e.id!==id); render(); triggerAutoSave(); }
         function openMemberManager() { renderMemberList(); const m=document.getElementById('memberModal'); m.classList.remove('hidden'); setTimeout(()=>m.querySelector('.bottom-sheet').classList.add('active'),10); }
         function closeMemberModal() { const s=document.getElementById('memberModal').querySelector('.bottom-sheet'); s.classList.remove('active'); setTimeout(()=>document.getElementById('memberModal').classList.add('hidden'),300); }
-        function renderMemberList() { document.getElementById('memberListContent').innerHTML = state.members.map(m=>`<div class="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl"><input type="text" value="${escapeHtml(m.name)}" onchange="updateMemberName('${m.id}',this.value)" class="flex-1 bg-transparent border-none font-bold outline-none"><button onclick="removeMember('${m.id}')" class="text-slate-300">🗑</button></div>`).join(''); if(window.lucide) lucide.createIcons(); }
-        function addMember(e) { const id='m_'+Math.random().toString(36).substr(2,9); state.members.push({id, name:'新規メンバー'}); render(); openMemberManager(); triggerAutoSave(); }
+        function renderMemberList() { document.getElementById('memberListContent').innerHTML = state.members.map(m=>`<div class="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100"><input type="text" value="${escapeHtml(m.name)}" onchange="updateMemberName('${m.id}',this.value)" class="flex-1 bg-transparent border-none font-bold text-slate-800 outline-none focus:ring-0"><button onclick="removeMember('${m.id}')" class="p-2 text-slate-300 hover:text-rose-500 transition-colors"><i data-lucide="trash-2" size="18"></i></button></div>`).join(''); if(window.lucide) lucide.createIcons(); }
+        function addMember(e) { const id='m_'+Math.random().toString(36).substr(2,9); state.members.push({id, name:'新規メンバー'}); render(); renderMemberList(); triggerAutoSave(); }
         function updateMemberName(id,n) { const m=state.members.find(m=>m.id===id); if(m) m.name=n; render(); triggerAutoSave(); }
-        function removeMember(id) { state.members=state.members.filter(m=>m.id!==id); render(); renderMemberList(); triggerAutoSave(); }
+        function removeMember(id) { if(!confirm('メンバーを削除しますか？')) return; state.members=state.members.filter(m=>m.id!==id); render(); renderMemberList(); triggerAutoSave(); }
         function toggleConfig() { document.getElementById('configModal').classList.toggle('hidden'); }
-        function saveConfig() { gasUrl=document.getElementById('gasUrlInput').value; localStorage.setItem('fair_share_gas_url_v3', gasUrl); toggleConfig(); }
+        function saveConfig() { gasUrl=document.getElementById('gasUrlInput').value; localStorage.setItem('fair_share_gas_url_v3', gasUrl); alert('保存しました！'); toggleConfig(); }
         function triggerAutoSave() { if(autoSaveTimer) clearTimeout(autoSaveTimer); autoSaveTimer=setTimeout(()=>{ if(gasUrl) syncData(); },2000); }
-        async function fetchData() { try { const res=await fetch(`${gasUrl}?pid=${state.projectId}`); const data=await res.json(); if(data.members){ state=data; render(); } } catch(e){} }
-        async function syncData() { try { await fetch(gasUrl, {method:'POST', body:JSON.stringify(state)}); } catch(e){} }
+        async function fetchData() { if(!gasUrl) return; try { const res=await fetch(`${gasUrl}?pid=${state.projectId}`); const data=await res.json(); if(data.members){ state=data; render(); } } catch(e){} }
+        async function syncData() { if(!gasUrl) return; try { await fetch(gasUrl, {method:'POST', body:JSON.stringify(state)}); } catch(e){} }
         function copyShareUrl() { const url = window.location.origin + window.location.pathname + '?pid=' + state.projectId; navigator.clipboard.writeText(url).then(() => alert('URLをコピーしました！')); }
     </script>
 </body>
