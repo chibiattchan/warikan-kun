@@ -6,7 +6,7 @@
     <title>わりかん君 Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.css">
-    j_addM<style>
+    calcplan<style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
       
         body {
@@ -302,6 +302,68 @@
         
         function formatCurrency(n) { return '¥' + Math.round(n).toLocaleString(); }
         // ページ上で onclick="switchTab('input')" のように呼ばれるのでグローバルで定義する
+        // 追加する or 置き換える関数（formatCurrency の近くに入れてください）
+        function renderSettlementPlan(calculation) {
+        const planContainer = document.getElementById('settlementPlan');
+        if (!planContainer) return;
+
+        // クリア
+        planContainer.innerHTML = '';
+
+        // 精算なし
+        if (!calculation || !Array.isArray(calculation.plan) || calculation.plan.length === 0) {
+            planContainer.innerHTML = `
+            <div class="bg-indigo-50 border-2 border-indigo-200 rounded-3xl p-6 text-center">
+                <div class="font-black text-indigo-600 text-lg">現在、精算の必要はありません✨</div>
+            </div>
+            `;
+            return;
+        }
+
+        // カード群ラッパー
+        const wrapper = document.createElement('div');
+        wrapper.className = 'space-y-4';
+
+        calculation.plan.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'bg-indigo-50 border-2 border-indigo-200 rounded-3xl p-4 flex items-center justify-between gap-4';
+
+            // Left: payer
+            const left = document.createElement('div');
+            left.className = 'flex-1 min-w-0';
+            left.innerHTML = `
+            <div class="text-xs font-black text-slate-900 uppercase">支払う</div>
+            <div class="font-black text-slate-900 truncate">${escapeHtml(p.fromName)}</div>
+            `;
+
+            // Center: arrow + amount
+            const center = document.createElement('div');
+            center.className = 'flex items-center gap-4';
+            center.innerHTML = `
+            <i data-lucide="arrow-right" class="text-indigo-600" style="stroke-width:2.5"></i>
+            <div class="text-3xl font-black text-slate-900">${formatCurrency(p.amount)}</div>
+            `;
+
+            // Right: receiver
+            const right = document.createElement('div');
+            right.className = 'flex-1 text-right min-w-0';
+            right.innerHTML = `
+            <div class="text-xs font-black text-slate-900 uppercase">受取る</div>
+            <div class="font-black text-slate-900 truncate">${escapeHtml(p.toName)}</div>
+            `;
+
+            card.appendChild(left);
+            card.appendChild(center);
+            card.appendChild(right);
+            wrapper.appendChild(card);
+        });
+
+        planContainer.appendChild(wrapper);
+
+        // Lucide アイコンを再描画
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+        }
+        //
         function switchTab(t) {
         const viewInput = document.getElementById('view-input');
         const viewList  = document.getElementById('view-list');
@@ -452,17 +514,7 @@
         }
         
         // Settlement plan
-        const planContainer = document.getElementById('settlementPlan');
-        if (planContainer) {
-            planContainer.innerHTML = '';
-            if (calculation.plan.length === 0) planContainer.innerHTML = '貸し借りは現在ありません';
-            else calculation.plan.forEach(p => {
-            const div = document.createElement('div');
-            div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100";
-            div.innerHTML = `<div class="text-left"><span class="text-[9px] block text-rose-400 font-bold uppercase mb-1">支払う</span><span class="font-bold">${escapeHtml(p.fromName)}</span></div><div class="text-right font-black">${formatCurrency(p.amount)} → ${escapeHtml(p.toName)}</div>`;
-            planContainer.appendChild(div);
-            });
-        }
+        renderSettlementPlan(calculation);
         
         try { localStorage.setItem('fs_cache_' + state.projectId, JSON.stringify(state)); } catch (e) {}
         if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
@@ -682,18 +734,7 @@
             });
             }
         
-            const planContainer = document.getElementById('settlementPlan');
-            if (planContainer) {
-            planContainer.innerHTML = '';
-            if (calc.plan.length === 0) planContainer.innerHTML = '貸し借りは現在ありません';
-            else calc.plan.forEach(p => {
-                const div = document.createElement('div');
-                div.className = "flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100";
-                div.innerHTML = `<div class="text-left"><span class="text-[9px] block text-rose-400 font-bold uppercase mb-1">支払う</span><span class="font-bold">${escapeHtml(p.fromName)}</span></div><div class="text-right font-black">${formatCurrency(p.amount)} → ${escapeHtml(p.toName)}</div>`;
-                planContainer.appendChild(div);
-            });
-            }
-        }
+            renderSettlementPlan(calc);
         
         // attach event listeners
         document.querySelectorAll('#modal_weights .weight-toggle-on').forEach(btn => btn.addEventListener('click', () => setWeightAndRefresh(btn.dataset.memberid, 1)));
