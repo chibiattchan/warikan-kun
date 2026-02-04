@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>優秀わりかん君</title>
-    phase1<script src="https://cdn.tailwindcss.com"></script>
+    newP<script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
@@ -35,7 +35,8 @@
             </div>
         </div>
         <div class="flex items-center gap-1">
-            <button onclick="copyShareUrl()" class="p-2 text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors"><i data-lucide="share-2" size="20"></i></button>
+            <button onclick="createNewProject()" class="p-2 text-emerald-600 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-colors" title="新規プロジェクト"><i data-lucide="plus-circle" size="20"></i></button>
+            <button onclick="copyShareUrl()" class="p-2 text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors" title="共有"><i data-lucide="share-2" size="20"></i></button>
         </div>
     </header>
 
@@ -432,6 +433,36 @@
             } catch(e){
                 console.error('同期エラー:', e);
             } 
+        }
+        
+        function createNewProject() {
+            if (!confirm('新しいプロジェクトを作成しますか？\n現在の内容は保存されています。')) return;
+            
+            // 新しいプロジェクトIDを生成
+            const newPid = 'p_' + Math.random().toString(36).substr(2, 9);
+            
+            // 新しいプロジェクトに切り替え
+            localStorage.setItem('fs_last_pid', newPid);
+            
+            // URLを更新（リロードなし）
+            const newUrl = window.location.origin + window.location.pathname + '?pid=' + newPid;
+            window.history.pushState({}, '', newUrl);
+            
+            // 新しい空のstateで初期化
+            state = {
+                projectId: newPid,
+                title: '新しい旅行',
+                members: [],
+                expenses: []
+            };
+            
+            document.getElementById('projectIdDisplay').innerText = `ID: ${newPid}`;
+            document.getElementById('projectTitle').value = '新しい旅行';
+            
+            render();
+            syncData(); // 即座に空のプロジェクトをGASに保存
+            
+            alert('新しいプロジェクトを作成しました！');
         }
         
         function copyShareUrl() { 
