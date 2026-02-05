@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>優秀わりかん君</title>
+    <title>みんわり　Beta</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
@@ -15,7 +15,15 @@
             position: fixed; left: 0; right: 0; z-index: 1200; pointer-events: none;
         }
         @media (min-width: 640px) {
-            .bottom-sheet { left: 50%; top: 50%; width: min(720px, calc(100% - 48px)); transform: translate(-50%, -60%) scale(0.98); border-radius: 2rem; max-height: 90vh; overflow: auto; padding: 2rem; }
+            .bottom-sheet { 
+                left: 50%; top: 50%; 
+                width: min(720px, calc(100% - 48px)); 
+                transform: translate(-50%, -60%) scale(0.98); 
+                border-radius: 2rem; 
+                max-height: 85vh; 
+                overflow-y: auto; 
+                padding: 2rem; 
+            }
             .bottom-sheet.active { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
         }
         @media (max-width: 639px) {
@@ -26,12 +34,14 @@
 </head>
 <body class="bg-slate-50 text-slate-900 pb-32">
 
-    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 text-center sticky top-0 z-[60] shadow-lg">
-        <div class="font-black text-lg tracking-tight">みんわり</div>
-        <div class="text-[10px] opacity-90 font-medium tracking-wide">ゴチャゴチャしても、最後はきれいに！</div>
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 sticky top-0 z-[60] shadow-lg">
+        <div class="flex items-baseline gap-3">
+            <span class="font-black text-xl tracking-tight">みんわり</span>
+            <span class="text-xs opacity-90 font-medium">ゴチャゴチャしても、最後はきれいに！</span>
+        </div>
     </div>
 
-    <header class="bg-white border-b border-slate-200 sticky top-[57px] z-50 px-4 h-16 flex items-center justify-between shadow-sm">
+    <header class="bg-white border-b border-slate-200 sticky top-[52px] z-50 px-4 h-16 flex items-center justify-between shadow-sm">
         <div class="flex items-center gap-2 overflow-hidden max-w-[70%]">
             <div class="bg-indigo-600 p-2 rounded-xl shrink-0 text-white"><i data-lucide="calculator" size="18"></i></div>
             <div class="overflow-hidden">
@@ -51,7 +61,7 @@
         </div>
     </header>
 
-    <div class="flex p-2 bg-white border-b border-slate-200 sticky top-[73px] z-40">
+    <div class="flex p-2 bg-white border-b border-slate-200 sticky top-[116px] z-40">
         <div class="flex max-w-xl mx-auto w-full gap-2">
             <button onclick="switchTab('input')" id="tab-input" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-200">入力</button>
             <button onclick="switchTab('list')" id="tab-list" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50">一覧</button>
@@ -236,12 +246,12 @@
             if (!exp) return;
             const content = document.getElementById('modalContent');
             
-            // モーダルのヘッダーを「保存」ボタンに変更
+            // モーダルのヘッダーを元に戻す（×ボタンのみ）
             const modalHeader = document.querySelector('#expenseModal h3').parentElement;
             modalHeader.innerHTML = `
                 <h3 class="text-xl font-black text-slate-800">支出の編集</h3>
-                <button onclick="closeExpenseModal()" class="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-black shadow-lg shadow-indigo-100 active:scale-95 transition-all">
-                    保存
+                <button onclick="closeExpenseModal()" class="p-2 bg-slate-100 rounded-full">
+                    <i data-lucide="x" size="20"></i>
                 </button>
             `;
 
@@ -286,7 +296,14 @@
                             `).join('')}
                         </div>
                     </div>
-                    <button onclick="deleteExpense('${exp.id}');closeExpenseModal();" class="w-full py-4 text-rose-500 font-bold text-sm hover:bg-rose-50 rounded-2xl transition-colors">この支出を削除する</button>
+                    <div class="pt-4 space-y-3 border-t border-slate-100">
+                        <button onclick="closeExpenseModal()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-colors">
+                            保存して閉じる
+                        </button>
+                        <button onclick="deleteExpense('${exp.id}');closeExpenseModal();" class="w-full py-3 text-rose-500 font-bold text-sm hover:bg-rose-50 rounded-2xl transition-colors">
+                            この支出を削除する
+                        </button>
+                    </div>
                 </div>
             `;
 
