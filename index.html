@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>優秀わりかん君</title>
-    v_logicupdate<script src="https://cdn.tailwindcss.com"></script>
+    resultv2<script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
@@ -180,57 +180,57 @@
         }
 
         /**
-         * 最適化された精算計算
+         * 最適化された精算計算（GAS版アルゴリズム）
          * 支払い回数を最小化するアルゴリズム
          */
         function optimizeSettlement(balances) {
             const EPSILON = 0.01; // 1円未満は無視
             
-            // 債務者（マイナス）と債権者（プラス）に分ける
-            const debtors = [];  // 支払う必要がある人
-            const creditors = []; // 受け取る権利がある人
-            
+            // データを配列に変換
+            const data = [];
             Object.entries(balances).forEach(([id, b]) => {
                 const name = (state.members.find(m => m.id === id) || {}).name || '不明';
-                if (b.diff < -EPSILON) {
-                    debtors.push({ id, name, amount: Math.abs(b.diff) });
-                } else if (b.diff > EPSILON) {
-                    creditors.push({ id, name, amount: b.diff });
+                if (Math.abs(b.diff) > EPSILON) {
+                    data.push({ name, amount: b.diff });
                 }
             });
             
-            // 金額の大きい順にソート（大きい金額から処理すると効率的）
-            debtors.sort((a, b) => b.amount - a.amount);
-            creditors.sort((a, b) => b.amount - a.amount);
+            // 金額の小さい順にソート（負の数が先に来る）
+            data.sort((a, b) => a.amount - b.amount);
             
-            const plan = [];
-            let i = 0, j = 0;
+            // 支払う人（負の金額）と受け取る人（正の金額）に分ける
+            const payers = data.filter(d => d.amount > EPSILON).map(d => ({ ...d }));
+            const payees = data.filter(d => d.amount < -EPSILON).map(d => ({ ...d, amount: Math.abs(d.amount) }));
             
-            while (i < debtors.length && j < creditors.length) {
-                const debtor = debtors[i];
-                const creditor = creditors[j];
+            const transactions = [];
+            
+            // 各受取人に対して、支払人から順番に集める
+            for (let i = 0; i < payees.length; i++) {
+                const payee = payees[i];
+                let remainingAmount = payee.amount;
                 
-                // 小さい方の金額を精算
-                const settleAmount = Math.min(debtor.amount, creditor.amount);
-                
-                if (settleAmount > EPSILON) {
-                    plan.push({
-                        fromName: debtor.name,
-                        toName: creditor.name,
-                        amount: settleAmount
-                    });
+                for (let j = 0; j < payers.length; j++) {
+                    const payer = payers[j];
+                    const amountToPay = Math.min(remainingAmount, payer.amount);
+                    
+                    if (amountToPay > EPSILON) {
+                        transactions.push({
+                            fromName: payee.name,
+                            toName: payer.name,
+                            amount: amountToPay
+                        });
+                        
+                        remainingAmount -= amountToPay;
+                        payer.amount -= amountToPay; // 支払人の残額を更新
+                    }
+                    
+                    if (remainingAmount < EPSILON) {
+                        break; // この受取人の精算完了
+                    }
                 }
-                
-                // 金額を減らす
-                debtor.amount -= settleAmount;
-                creditor.amount -= settleAmount;
-                
-                // 完了した方を次に進める
-                if (debtor.amount < EPSILON) i++;
-                if (creditor.amount < EPSILON) j++;
             }
             
-            return plan;
+            return transactions;
         }
 
         function render() {
