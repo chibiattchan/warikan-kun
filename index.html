@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>優秀わりかん君</title>
-    resultv2<script src="https://cdn.tailwindcss.com"></script>
+    texts<script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
@@ -63,8 +63,8 @@
 
     <div class="flex p-2 bg-white border-b border-slate-200 sticky top-[116px] z-40">
         <div class="flex max-w-xl mx-auto w-full gap-2">
-            <button onclick="switchTab('input')" id="tab-input" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-200">入力</button>
-            <button onclick="switchTab('list')" id="tab-list" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50">一覧</button>
+            <button onclick="switchTab('input')" id="tab-input" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-200">ダッシュボード</button>
+            <button onclick="switchTab('list')" id="tab-list" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all text-slate-400 hover:bg-slate-50">詳細</button>
         </div>
     </div>
 
@@ -92,23 +92,29 @@
             </div>
 
             <div id="result-section-input" class="space-y-4 pt-4">
-                <div class="flex items-center gap-2 px-1 text-indigo-600"><i data-lucide="check-circle-2" size="20"></i><h2 class="font-bold text-slate-800 text-lg">精算結果</h2></div>
+                <div class="flex items-center gap-2 px-1 text-indigo-600"><i data-lucide="check-circle-2" size="20"></i><h2 class="font-bold text-slate-800 text-lg">みんなの精算結果</h2></div>
                 <div id="settlementPlan" class="text-center py-4 text-slate-400 text-sm italic">貸し借りは現在ありません</div>
             </div>
         </div>
 
         <div id="view-list" class="hidden space-y-8">
-            <div class="bg-white rounded-3xl border border-slate-200 overflow-x-auto shadow-xl no-scrollbar">
-                <table class="w-full text-sm min-w-[800px] border-collapse">
-                    <thead><tr id="fullTableHeadRow" class="bg-slate-50 border-b border-slate-100 text-left"></tr></thead>
-                    <tbody id="fullExpensesTable" class="divide-y divide-slate-50"></tbody>
-                </table>
+            <div class="space-y-3">
+                <h2 class="font-bold text-slate-800 text-lg px-1">みんなの負担一覧</h2>
+                <div class="bg-white rounded-3xl border border-slate-200 overflow-x-auto shadow-xl no-scrollbar">
+                    <table class="w-full text-sm min-w-[800px] border-collapse">
+                        <thead><tr id="fullTableHeadRow" class="bg-slate-50 border-b border-slate-100 text-left"></tr></thead>
+                        <tbody id="fullExpensesTable" class="divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
             </div>
-            <div id="memberSummaryTableContainer" class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-lg">
-                <table class="w-full text-sm border-collapse text-left">
-                    <thead><tr class="bg-slate-50 border-b border-slate-100 font-black text-slate-400 text-[10px] uppercase"><th class="p-4">メンバー</th><th class="p-4 text-right">支払済</th><th class="p-4 text-right">負担分</th><th class="p-4 text-right">差額</th></tr></thead>
-                    <tbody id="memberSummaryTable" class="divide-y divide-slate-50"></tbody>
-                </table>
+            <div class="space-y-3">
+                <h2 class="font-bold text-slate-800 text-lg px-1">みんなの収支</h2>
+                <div id="memberSummaryTableContainer" class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-lg">
+                    <table class="w-full text-sm border-collapse text-left">
+                        <thead><tr class="bg-slate-50 border-b border-slate-100 font-black text-slate-400 text-[10px] uppercase"><th class="p-4">メンバー</th><th class="p-4 text-right">支払済</th><th class="p-4 text-right">負担分</th><th class="p-4 text-right">差額</th></tr></thead>
+                        <tbody id="memberSummaryTable" class="divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </main>
@@ -172,65 +178,21 @@
                 }
             });
             Object.keys(balances).forEach(id => balances[id].diff = balances[id].paid - balances[id].should);
-            
-            // 最適化された精算計算
-            const plan = optimizeSettlement(balances);
-            
-            return { total, plan, balances };
-        }
-
-        /**
-         * 最適化された精算計算（GAS版アルゴリズム）
-         * 支払い回数を最小化するアルゴリズム
-         */
-        function optimizeSettlement(balances) {
-            const EPSILON = 0.01; // 1円未満は無視
-            
-            // データを配列に変換
-            const data = [];
-            Object.entries(balances).forEach(([id, b]) => {
+            const plan = [], d = [], c = [];
+            Object.entries(balances).forEach(([id,b]) => {
                 const name = (state.members.find(m => m.id === id) || {}).name || '不明';
-                if (Math.abs(b.diff) > EPSILON) {
-                    data.push({ name, amount: b.diff });
-                }
+                if (b.diff < -0.1) d.push({ name, amt: b.diff });
+                else if (b.diff > 0.1) c.push({ name, amt: b.diff });
             });
-            
-            // 金額の小さい順にソート（負の数が先に来る）
-            data.sort((a, b) => a.amount - b.amount);
-            
-            // 支払う人（負の金額）と受け取る人（正の金額）に分ける
-            const payers = data.filter(d => d.amount > EPSILON).map(d => ({ ...d }));
-            const payees = data.filter(d => d.amount < -EPSILON).map(d => ({ ...d, amount: Math.abs(d.amount) }));
-            
-            const transactions = [];
-            
-            // 各受取人に対して、支払人から順番に集める
-            for (let i = 0; i < payees.length; i++) {
-                const payee = payees[i];
-                let remainingAmount = payee.amount;
-                
-                for (let j = 0; j < payers.length; j++) {
-                    const payer = payers[j];
-                    const amountToPay = Math.min(remainingAmount, payer.amount);
-                    
-                    if (amountToPay > EPSILON) {
-                        transactions.push({
-                            fromName: payee.name,
-                            toName: payer.name,
-                            amount: amountToPay
-                        });
-                        
-                        remainingAmount -= amountToPay;
-                        payer.amount -= amountToPay; // 支払人の残額を更新
-                    }
-                    
-                    if (remainingAmount < EPSILON) {
-                        break; // この受取人の精算完了
-                    }
-                }
+            let i=0, j=0;
+            while(i<d.length && j<c.length) {
+                const s = Math.min(Math.abs(d[i].amt), c[j].amt);
+                plan.push({ fromName: d[i].name, toName: c[j].name, amount: s });
+                d[i].amt += s; c[j].amt -= s;
+                if (Math.abs(d[i].amt) < 0.1) i++;
+                if (c[j].amt < 0.1) j++;
             }
-            
-            return transactions;
+            return { total, plan, balances };
         }
 
         function render() {
@@ -285,12 +247,12 @@
                 planContainer.innerHTML = calc.plan.map(p => `
                     <div class="bg-indigo-50 border-2 border-indigo-200 rounded-3xl p-4 mb-3 flex items-center justify-between gap-4">
                         <div class="flex-1 min-w-0 text-left">
-                            <div class="text-[9px] font-black text-rose-400 uppercase">支払う</div>
-                            <div class="font-black text-rose-600 truncate">${escapeHtml(p.fromName)}</div>
+                            <div class="text-[9px] font-black text-rose-500 uppercase">支払う</div>
+                            <div class="font-black text-slate-900 truncate">${escapeHtml(p.fromName)}</div>
                         </div>
                         <div class="flex items-center gap-2">
-                            <i data-lucide="arrow-right" size="16" class="text-slate-400"></i>
-                            <div class="text-xl font-black text-slate-900">${formatCurrency(p.amount)}</div>
+                            <i data-lucide="arrow-right" size="16" class="text-indigo-600"></i>
+                            <div class="text-xl font-black text-indigo-600">${formatCurrency(p.amount)}</div>
                         </div>
                         <div class="flex-1 text-right min-w-0">
                             <div class="text-[9px] font-black text-emerald-400 uppercase">受取る</div>
