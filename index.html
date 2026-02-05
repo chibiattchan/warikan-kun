@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>優秀わりかん君</title>
-    testing<script src="https://cdn.tailwindcss.com"></script>
+   addM <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
@@ -400,6 +400,16 @@
             render(); 
             renderMemberList(); 
             triggerAutoSave(); 
+            
+            // 追加した直後に該当の入力欄にフォーカス&全選択
+            setTimeout(() => {
+                const inputs = document.querySelectorAll('#memberListContent input[type="text"]');
+                const lastInput = inputs[inputs.length - 1];
+                if (lastInput) {
+                    lastInput.focus();
+                    lastInput.select();
+                }
+            }, 50);
         }
         
         function updateMemberName(id,n) { 
