@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>優秀わりかん君</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-   deploy <style>
+    testing<script src="https://cdn.tailwindcss.com"></script>
+    <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -241,6 +241,12 @@
                         <input id="modal_title" type="text" value="${escapeHtml(exp.title)}" placeholder="例：タクシー代" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 font-bold outline-none focus:border-indigo-500 transition-colors">
                     </div>
                     <div>
+                        <label class="text-[10px] font-black text-slate-400 block mb-2 uppercase">支払者</label>
+                        <select id="modal_payer" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 font-bold outline-none focus:border-indigo-500 transition-colors">
+                            ${state.members.map(m => `<option value="${m.id}" ${exp.payerId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
                         <label class="text-[10px] font-black text-slate-400 block mb-2 uppercase">金額</label>
                         <div class="flex gap-2 mb-3">
                             <button onclick="addAmount('${exp.id}', 1000)" class="flex-1 bg-indigo-50 text-indigo-600 py-3 rounded-xl font-bold text-xs hover:bg-indigo-100">+1,000</button>
@@ -276,11 +282,13 @@
             // 入力監視の設定
             const updateAll = () => {
                 exp.title = document.getElementById('modal_title').value;
+                exp.payerId = document.getElementById('modal_payer').value;
                 exp.amount = parseFloat(document.getElementById('modal_amount').value) || 0;
                 render();
                 triggerAutoSave();
             };
             document.getElementById('modal_title').oninput = updateAll;
+            document.getElementById('modal_payer').onchange = updateAll;
             document.getElementById('modal_amount').oninput = updateAll;
 
             const modal = document.getElementById('expenseModal');
