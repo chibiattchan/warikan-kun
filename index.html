@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>優秀わりかん君</title>
-    v5<script src="https://cdn.tailwindcss.com"></script>
+    resultupdate<script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
@@ -73,7 +73,7 @@
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-slate-900 rounded-3xl p-5 text-white shadow-xl">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">合計支出</p>
-                    <div id="totalAmount" class="text-2xl font-black tracking-tighter">¥0</div>
+                    <div id="totalAmount" class="text-2xl font-black italic tracking-tighter">¥0</div>
                 </div>
                 <div class="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col justify-center">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">メンバー</p>
@@ -201,7 +201,7 @@
                 const div = document.createElement('div');
                 div.className = "bg-white p-4 rounded-2xl border border-slate-200 flex justify-between cursor-pointer active:scale-95 transition-all shadow-sm";
                 div.onclick = () => openExpenseModal(exp.id);
-                div.innerHTML = `<div><div class="font-bold text-slate-800">${escapeHtml(exp.title || '無題')}</div><div class="text-[10px] text-slate-400 font-black">${escapeHtml(pName)} 支払</div></div><div class="text-lg font-black">${formatCurrency(exp.amount)}</div>`;
+                div.innerHTML = `<div><div class="font-bold text-slate-800">${escapeHtml(exp.title || '無題')}</div><div class="text-[10px] text-slate-400 font-black">${escapeHtml(pName)} 支払</div></div><div class="text-lg font-black italic">${formatCurrency(exp.amount)}</div>`;
                 recent.appendChild(div);
             });
 
@@ -227,7 +227,7 @@
             const planContainer = document.getElementById('settlementPlan');
             if (calc.plan.length === 0) {
                 planContainer.innerHTML = state.members.map(m => `
-                    <div class="bg-slate-50 border-2 border-slate-200 rounded-3xl p-4 mb-3 flex items-center justify-between gap-4">
+                    <div class="bg-indigo-50 border-2 border-indigo-200 rounded-3xl p-4 mb-3 flex items-center justify-between gap-4">
                         <div class="flex-1 min-w-0 text-left">
                             <div class="text-[9px] font-black text-slate-400 uppercase">メンバー</div>
                             <div class="font-black text-slate-900 truncate">${escapeHtml(m.name)}</div>
@@ -239,7 +239,7 @@
                 `).join('');
             } else {
                 planContainer.innerHTML = calc.plan.map(p => `
-                    <div class="bg-white border-2 border-slate-200 rounded-3xl p-4 mb-3 flex items-center justify-between gap-4">
+                    <div class="bg-indigo-50 border-2 border-indigo-200 rounded-3xl p-4 mb-3 flex items-center justify-between gap-4">
                         <div class="flex-1 min-w-0 text-left">
                             <div class="text-[9px] font-black text-rose-400 uppercase">支払う</div>
                             <div class="font-black text-rose-600 truncate">${escapeHtml(p.fromName)}</div>
