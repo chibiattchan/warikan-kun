@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>優秀わりかん君</title>
-    resultupdate<script src="https://cdn.tailwindcss.com"></script>
+    v_logicupdate<script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
@@ -172,21 +172,65 @@
                 }
             });
             Object.keys(balances).forEach(id => balances[id].diff = balances[id].paid - balances[id].should);
-            const plan = [], d = [], c = [];
-            Object.entries(balances).forEach(([id,b]) => {
-                const name = (state.members.find(m => m.id === id) || {}).name || '不明';
-                if (b.diff < -0.1) d.push({ name, amt: b.diff });
-                else if (b.diff > 0.1) c.push({ name, amt: b.diff });
-            });
-            let i=0, j=0;
-            while(i<d.length && j<c.length) {
-                const s = Math.min(Math.abs(d[i].amt), c[j].amt);
-                plan.push({ fromName: d[i].name, toName: c[j].name, amount: s });
-                d[i].amt += s; c[j].amt -= s;
-                if (Math.abs(d[i].amt) < 0.1) i++;
-                if (c[j].amt < 0.1) j++;
-            }
+            
+            // 最適化された精算計算
+            const plan = optimizeSettlement(balances);
+            
             return { total, plan, balances };
+        }
+
+        /**
+         * 最適化された精算計算
+         * 支払い回数を最小化するアルゴリズム
+         */
+        function optimizeSettlement(balances) {
+            const EPSILON = 0.01; // 1円未満は無視
+            
+            // 債務者（マイナス）と債権者（プラス）に分ける
+            const debtors = [];  // 支払う必要がある人
+            const creditors = []; // 受け取る権利がある人
+            
+            Object.entries(balances).forEach(([id, b]) => {
+                const name = (state.members.find(m => m.id === id) || {}).name || '不明';
+                if (b.diff < -EPSILON) {
+                    debtors.push({ id, name, amount: Math.abs(b.diff) });
+                } else if (b.diff > EPSILON) {
+                    creditors.push({ id, name, amount: b.diff });
+                }
+            });
+            
+            // 金額の大きい順にソート（大きい金額から処理すると効率的）
+            debtors.sort((a, b) => b.amount - a.amount);
+            creditors.sort((a, b) => b.amount - a.amount);
+            
+            const plan = [];
+            let i = 0, j = 0;
+            
+            while (i < debtors.length && j < creditors.length) {
+                const debtor = debtors[i];
+                const creditor = creditors[j];
+                
+                // 小さい方の金額を精算
+                const settleAmount = Math.min(debtor.amount, creditor.amount);
+                
+                if (settleAmount > EPSILON) {
+                    plan.push({
+                        fromName: debtor.name,
+                        toName: creditor.name,
+                        amount: settleAmount
+                    });
+                }
+                
+                // 金額を減らす
+                debtor.amount -= settleAmount;
+                creditor.amount -= settleAmount;
+                
+                // 完了した方を次に進める
+                if (debtor.amount < EPSILON) i++;
+                if (creditor.amount < EPSILON) j++;
+            }
+            
+            return plan;
         }
 
         function render() {
