@@ -18,16 +18,18 @@
     <meta name="twitter:description" content="ゴチャゴチャしても、最後はきれいに！">
     <meta name="twitter:image" content="https://chibiattchan.github.io/warikan-kun/ogp.jpg">
     
-    テスト<script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* 日付入力フィールドの幅を制限 */
+        /* 日付入力フィールドの幅を強制的に制限 */
         input[type="date"] {
-            max-width: 100%;
-            min-width: 0;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }
         
         .bottom-sheet {
