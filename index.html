@@ -18,62 +18,31 @@
     <meta name="twitter:description" content="ゴチャゴチャしても、最後はきれいに！">
     <meta name="twitter:image" content="https://chibiattchan.github.io/warikan-kun/ogp.jpg">
     
-    <script src="https://cdn.tailwindcss.com"></script>
+    push<script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        /* 日付入力フィールドの幅を強制的に制限 */
-        input[type="date"] {
-            max-width: 100% !important;
-            min-width: 0 !important;
-            width: 100% !important;
-            box-sizing: border-box !important;
-        }
-        
         .bottom-sheet {
             transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease;
-            position: fixed; 
-            z-index: 1200; 
-            pointer-events: none;
-            background: white;
+            transform: translateY(100%); opacity: 0;
+            position: fixed; left: 0; right: 0; z-index: 1200; pointer-events: none;
         }
         @media (min-width: 640px) {
             .bottom-sheet { 
-                left: 50%; 
-                top: 50%; 
+                left: 50%; top: 50%; 
                 width: min(580px, calc(100% - 48px)); 
-                transform: translate(-50%, -60%) scale(0.95); 
+                transform: translate(-50%, -60%) scale(0.98); 
                 border-radius: 2rem; 
-                max-height: 90vh; 
+                max-height: 85vh; 
                 overflow-y: auto; 
                 padding: 2rem; 
-                opacity: 0;
             }
-            .bottom-sheet.active { 
-                transform: translate(-50%, -50%) scale(1); 
-                opacity: 1; 
-                pointer-events: auto; 
-            }
+            .bottom-sheet.active { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
         }
         @media (max-width: 639px) {
-            .bottom-sheet { 
-                left: 0; 
-                right: 0; 
-                bottom: 0; 
-                border-top-left-radius: 2rem; 
-                border-top-right-radius: 2rem; 
-                max-height: 92vh; 
-                overflow-y: auto;
-                transform: translateY(100%);
-                opacity: 0;
-            }
-            .bottom-sheet.active { 
-                transform: translateY(0); 
-                opacity: 1; 
-                pointer-events: auto; 
-            }
+            .bottom-sheet { left: 0; right: 0; bottom: 0; border-top-left-radius: 2rem; border-top-right-radius: 2rem; max-height: 92vh; overflow-y: auto; }
+            .bottom-sheet.active { transform: translateY(0); opacity: 1; pointer-events: auto; }
         }
     </style>
 </head>
@@ -376,10 +345,6 @@
                         <input id="modal_title" type="text" value="${escapeHtml(exp.title)}" placeholder="例：タクシー代" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 font-bold outline-none focus:border-indigo-500 transition-colors">
                     </div>
                     <div>
-                        <label class="text-[10px] font-black text-slate-400 block mb-2 uppercase">日付</label>
-                        <input id="modal_date" type="date" value="${exp.date || new Date().toISOString().split('T')[0]}" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 font-bold outline-none focus:border-indigo-500 transition-colors">
-                    </div>
-                    <div>
                         <label class="text-[10px] font-black text-slate-400 block mb-2 uppercase">支払者</label>
                         <select id="modal_payer" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 font-bold outline-none focus:border-indigo-500 transition-colors">
                             ${state.members.map(m => `<option value="${m.id}" ${exp.payerId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
@@ -428,14 +393,12 @@
             // 入力監視の設定
             const updateAll = () => {
                 exp.title = document.getElementById('modal_title').value;
-                exp.date = document.getElementById('modal_date').value;
                 exp.payerId = document.getElementById('modal_payer').value;
                 exp.amount = parseFloat(document.getElementById('modal_amount').value) || 0;
                 render();
                 triggerAutoSave();
             };
             document.getElementById('modal_title').oninput = updateAll;
-            document.getElementById('modal_date').onchange = updateAll;
             document.getElementById('modal_payer').onchange = updateAll;
             document.getElementById('modal_amount').oninput = updateAll;
 
@@ -507,9 +470,7 @@
             if(state.members.length===0) return openMemberManager(); 
             const id='e_'+Math.random().toString(36).substr(2,9), weights={}; 
             state.members.forEach(m=>weights[m.id]=1); 
-            // 今日の日付を YYYY-MM-DD 形式で取得
-            const today = new Date().toISOString().split('T')[0];
-            state.expenses.unshift({id, title:'', amount:0, payerId:state.members[0].id, weights, date: today}); 
+            state.expenses.unshift({id, title:'', amount:0, payerId:state.members[0].id, weights}); 
             render(); 
             openExpenseModal(id); 
         }
