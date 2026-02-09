@@ -19,7 +19,7 @@
     <meta name="twitter:image" content="https://chibiattchan.github.io/warikan-kun/ogp.jpg">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    modelv2<style>
+    <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -252,7 +252,7 @@
                 state.expenses.forEach(exp => {
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-50 transition-colors cursor-pointer";
-                    tr.innerHTML = `<td class="p-4 font-bold" onclick="openExpenseModal('${exp.id}')">${escapeHtml(exp.title)}</td><td class="p-4 text-indigo-600 font-bold" onclick="openExpenseModal('${exp.id}')">${escapeHtml(state.members.find(m=>m.id===exp.payerId)?.name)}</td><td class="p-4 text-right font-black" onclick="openExpenseModal('${exp.id}')">${formatCurrency(exp.amount)}</td>${state.members.map(m => `<td class="p-4 text-center ${exp.weights?.[m.id]>0?'bg-indigo-50 text-indigo-600 font-black':'text-slate-200'}" onclick="toggleWeightInTable('${exp.id}','${m.id}')">${exp.weights?.[m.id]>0? (exp.weights[m.id] > 1 ? exp.weights[m.id] : '✔') :''}</td>`).join('')}<td class="p-4 text-right"><button onclick="deleteExpense('${exp.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i data-lucide="trash-2" size="16"></i></button></td>`;
+                    tr.innerHTML = `<td class="p-4 font-bold" onclick="openExpenseModal('${exp.id}')">${escapeHtml(exp.title)}</td><td class="p-4 text-indigo-600 font-bold" onclick="openExpenseModal('${exp.id}')">${escapeHtml(state.members.find(m=>m.id===exp.payerId)?.name)}</td><td class="p-4 text-right font-black" onclick="openExpenseModal('${exp.id}')">${formatCurrency(exp.amount)}</td>${state.members.map(m => `<td class="p-4 text-center ${exp.weights?.[m.id]>0?'bg-indigo-50 text-indigo-600 font-black':'text-slate-200'}" onclick="toggleWeightInTable('${exp.id}','${m.id}')">${exp.weights?.[m.id]>0? exp.weights[m.id] :''}</td>`).join('')}<td class="p-4 text-right"><button onclick="deleteExpense('${exp.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i data-lucide="trash-2" size="16"></i></button></td>`;
                     tableBody.appendChild(tr);
                 });
             }
