@@ -165,6 +165,15 @@
 
     <button id="floatingAddBtn" onclick="createNewExpense(event)" class="fixed bottom-8 right-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center z-[60] active:scale-95 transition-all hover:bg-indigo-700"><i data-lucide="plus" size="32"></i></button>
 
+    <div id="imagePreviewModal" class="fixed inset-0 z-[200] hidden">
+        <div class="absolute inset-0 bg-black/80" onclick="document.getElementById('imagePreviewModal').classList.add('hidden')"></div>
+        <div class="absolute inset-0 flex flex-col items-center justify-center p-4 gap-4">
+            <p class="text-white font-bold text-sm">画像を長押し → 写真に保存 してください</p>
+            <img id="previewImg" src="" class="max-w-full max-h-[80vh] rounded-2xl shadow-2xl" style="-webkit-user-select:none;user-select:none;">
+            <button onclick="document.getElementById('imagePreviewModal').classList.add('hidden')" class="px-6 py-3 bg-white text-slate-800 font-bold rounded-2xl">閉じる</button>
+        </div>
+    </div>
+
     <div id="expenseModal" class="fixed inset-0 z-[100] hidden">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeExpenseModal()"></div>
         <div class="bottom-sheet fixed inset-x-0 bottom-0 w-full bg-white p-6 max-h-[92vh] overflow-y-auto no-scrollbar shadow-2xl">
@@ -661,16 +670,13 @@
         async function saveTableAsImage() {
             const el = document.getElementById('captureTarget');
             showToast('画像を生成中...');
-            // スクロールなしで全体をキャプチャするため一時的にoverflow解除
             const orig = el.style.overflow;
             el.style.overflow = 'visible';
             const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
             el.style.overflow = orig;
-            const link = document.createElement('a');
-            link.download = `${state.title || 'みんわり'}_負担一覧.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            showToast('画像を保存しました！');
+            const dataUrl = canvas.toDataURL('image/png');
+            document.getElementById('previewImg').src = dataUrl;
+            document.getElementById('imagePreviewModal').classList.remove('hidden');
         }
 
         function copyShareUrl() {
