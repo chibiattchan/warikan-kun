@@ -185,6 +185,7 @@
         // GASのURLをハードコード
         const gasUrl = 'https://script.google.com/macros/s/AKfycbyjeHBCKw-w57HoWlqm67eZztKAjYHb0TyVyl7H0jPfrCqBx-i2xiyTTKwhdZBLabca-Q/exec';
         let autoSaveTimer = null;
+        let newProjectPending = false;
 
         window.onload = () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -602,16 +603,15 @@
         }
         
         function createNewProject(btn) {
-            if (btn && btn.dataset.pending !== '1') {
-                btn.dataset.pending = '1';
+            if (!newProjectPending) {
+                newProjectPending = true;
                 const origHTML = btn.innerHTML;
                 const origClass = btn.className;
-                btn.innerHTML = '<i data-lucide="check" size="18"></i><span class="hidden sm:inline">作成確認</span><span class="sm:hidden">確認</span>';
-                btn.className = 'flex items-center gap-1 px-3 py-2 text-white bg-emerald-500 rounded-xl hover:bg-emerald-600 transition-colors text-sm font-bold';
-                if (window.lucide) lucide.createIcons();
+                btn.innerHTML = '<span>もう一度押して確定</span>';
+                btn.className = 'flex items-center gap-1 px-3 py-2 text-white bg-emerald-500 rounded-xl transition-colors text-sm font-bold';
                 setTimeout(() => {
-                    if (btn.isConnected && btn.dataset.pending === '1') {
-                        btn.dataset.pending = '';
+                    if (newProjectPending) {
+                        newProjectPending = false;
                         btn.innerHTML = origHTML;
                         btn.className = origClass;
                         if (window.lucide) lucide.createIcons();
@@ -619,7 +619,7 @@
                 }, 3000);
                 return;
             }
-            if (btn) btn.dataset.pending = '';
+            newProjectPending = false;
 
             const newPid = 'p_' + Math.random().toString(36).substr(2, 9);
             localStorage.setItem('fs_last_pid', newPid);
