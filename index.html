@@ -140,8 +140,11 @@
 
         <div id="view-list" class="hidden space-y-8">
             <div class="space-y-3">
-                <h2 class="font-bold text-slate-800 text-lg px-1">みんなの負担一覧</h2>
-                <div class="bg-white rounded-3xl border border-slate-200 overflow-x-auto shadow-xl no-scrollbar">
+                <div class="flex items-center justify-between px-1">
+                    <h2 class="font-bold text-slate-800 text-lg">みんなの負担一覧</h2>
+                    <button onclick="saveTableAsImage()" class="flex items-center gap-1 px-3 py-2 text-indigo-600 bg-indigo-50 rounded-xl text-sm font-bold hover:bg-indigo-100 transition-colors"><i data-lucide="image-down" size="16"></i> 画像で保存</button>
+                </div>
+                <div id="captureTarget" class="bg-white rounded-3xl border border-slate-200 overflow-x-auto shadow-xl no-scrollbar">
                     <table class="w-full text-sm min-w-[800px] border-collapse">
                         <thead><tr id="fullTableHeadRow" class="bg-slate-50 border-b border-slate-100 text-left"></tr></thead>
                         <tbody id="fullExpensesTable" class="divide-y divide-slate-50"></tbody>
@@ -180,6 +183,7 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
         let state = { projectId: '', title: '新しい旅行', members: [], expenses: [] };
         // GASのURLをハードコード
@@ -652,6 +656,21 @@
             try { document.execCommand('copy'); showToast('URLをコピーしました！'); }
             catch(e) { showToast('コピーできませんでした'); }
             document.body.removeChild(ta);
+        }
+
+        async function saveTableAsImage() {
+            const el = document.getElementById('captureTarget');
+            showToast('画像を生成中...');
+            // スクロールなしで全体をキャプチャするため一時的にoverflow解除
+            const orig = el.style.overflow;
+            el.style.overflow = 'visible';
+            const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+            el.style.overflow = orig;
+            const link = document.createElement('a');
+            link.download = `${state.title || 'みんわり'}_負担一覧.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showToast('画像を保存しました！');
         }
 
         function copyShareUrl() {
