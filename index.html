@@ -680,9 +680,17 @@
             showToast('画像を生成中...');
             const el = document.getElementById(elementId);
             const source = tableOnly ? el.querySelector('table') : el;
+            const clone = source.cloneNode(true);
+            // truncate・min-w-0を解除して文字が切れないようにする
+            clone.querySelectorAll('[class]').forEach(node => {
+                node.classList.remove('truncate', 'min-w-0');
+                node.style.overflow = 'visible';
+                node.style.whiteSpace = 'normal';
+                node.style.textOverflow = 'clip';
+            });
             const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'position:fixed;top:-99999px;left:-99999px;background:#fff;padding:16px;border-radius:24px;width:max-content';
-            wrapper.appendChild(source.cloneNode(true));
+            wrapper.style.cssText = 'position:fixed;top:-99999px;left:-99999px;background:#fff;padding:16px;border-radius:24px;width:360px';
+            wrapper.appendChild(clone);
             document.body.appendChild(wrapper);
             const canvas = await html2canvas(wrapper, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
             document.body.removeChild(wrapper);
