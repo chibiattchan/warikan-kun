@@ -697,10 +697,31 @@
             const source = tableOnly ? el.querySelector('table') : el;
             const clone = source.cloneNode(true);
 
-            // ドラッグハンドル列は画像に不要なので除外
-            clone.querySelectorAll('.drag-handle').forEach(td => td.style.display = 'none');
+            if (tableOnly) {
+                // ① 不要な列（ハンドル=先頭、削除ボタン=末尾）を物理削除
+                clone.querySelectorAll('tr').forEach(tr => {
+                    const cells = Array.from(tr.querySelectorAll('th, td'));
+                    if (cells.length > 0) cells[0].remove();
+                    const remaining = Array.from(tr.querySelectorAll('th, td'));
+                    if (remaining.length > 0) remaining[remaining.length - 1].remove();
+                });
 
-            // ① すべての子孫要素のスクロール・折り返し制限を解除
+                // ② table-layout:fixed でカラム幅を安定させる
+                clone.style.setProperty('table-layout', 'fixed', 'important');
+                clone.style.setProperty('width',        '100%',  'important');
+                clone.style.setProperty('transform',    'none',  'important');
+                clone.style.setProperty('margin',       '0',     'important');
+
+                // ③ thead の各 th に固定幅を割り振る（項目・支払者・金額・メンバー×N）
+                const theadCells = Array.from(clone.querySelectorAll('thead th'));
+                const colWidths = [200, 120, 100]; // 項目・支払者・金額
+                theadCells.forEach((th, i) => {
+                    const w = colWidths[i] !== undefined ? colWidths[i] : 80;
+                    th.style.setProperty('width', w + 'px', 'important');
+                });
+            }
+
+            // ④ すべての子孫要素のスクロール・折り返し制限を解除
             clone.querySelectorAll('*').forEach(node => {
                 if (node.classList) {
                     node.classList.remove('truncate', 'min-w-0', 'overflow-x-auto', 'overflow-y-auto', 'no-scrollbar');
@@ -711,20 +732,16 @@
                 node.style.setProperty('text-overflow', 'clip',    'important');
             });
 
-            // ② td/th は絶対に折り返さない
+            // ⑤ td/th のパディング統一・折り返し禁止
             clone.querySelectorAll('td, th').forEach(cell => {
-                cell.style.setProperty('white-space', 'nowrap', 'important');
+                cell.style.setProperty('white-space', 'nowrap',  'important');
+                cell.style.setProperty('padding',     '12px',    'important');
+                cell.style.setProperty('margin',      '0',       'important');
             });
 
-            // ③ テーブル本体のスタイルリセット
-            if (tableOnly) {
-                clone.style.setProperty('width',     '100%',  'important');
-                clone.style.setProperty('transform', 'none',  'important');
-                clone.style.setProperty('margin',    '0',     'important');
-            }
             clone.style.backgroundColor = '#ffffff';
 
-            // ④ 1200px 幅のコンテナに配置（スマホビューポートを無視）
+            // ⑥ 1200px 幅コンテナへ配置（スマホビューポートを無視）
             const captureWidth = tableOnly ? 1200 : 400;
             const wrapper = document.createElement('div');
             wrapper.style.cssText = [
@@ -736,7 +753,7 @@
             wrapper.appendChild(clone);
             document.body.appendChild(wrapper);
 
-            // ⑤ ブラウザに再計算・描画を促してからキャプチャ
+            // ⑦ ブラウザに再計算・描画を促してからキャプチャ
             void wrapper.getBoundingClientRect();
             await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
             await new Promise(r => setTimeout(r, 150));
