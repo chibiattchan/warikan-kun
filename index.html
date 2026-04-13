@@ -712,22 +712,28 @@
                 node.style.maxWidth = 'none';
             });
 
-            // position:absolute で DOM に追加（fixed はモバイルのビューポートに拘束されて切れる）
+            // クローン自体の幅を強制展開（テーブルは全列が入る 1200px、精算カードは 400px）
+            const captureWidth = tableOnly ? 1200 : 400;
+            clone.style.width = captureWidth + 'px';
+            clone.style.minWidth = captureWidth + 'px';
+            clone.style.backgroundColor = '#ffffff';
+
+            // position:fixed + 画面外配置でモバイルビューポートの制約を回避
             const wrapper = document.createElement('div');
             wrapper.style.cssText = [
-                'position:absolute', 'top:0', 'left:-99999px',
-                'visibility:hidden', 'z-index:-1',
+                'position:fixed', 'top:0', 'left:-99999px',
+                'z-index:99999',
                 'background:#ffffff', 'padding:16px', 'border-radius:24px',
-                tableOnly ? 'width:auto' : 'width:360px'
+                'width:' + captureWidth + 'px'
             ].join(';');
             wrapper.appendChild(clone);
             document.body.appendChild(wrapper);
 
-            // DOM 追加後に実際の全体サイズを取得して html2canvas に渡す
+            // ブラウザがクローンを描画するまで待機（真っ白防止）
+            await new Promise(r => setTimeout(r, 150));
+
             const fullW = wrapper.scrollWidth;
             const fullH = wrapper.scrollHeight;
-            wrapper.style.width  = fullW + 'px';
-            wrapper.style.height = fullH + 'px';
 
             const canvas = await html2canvas(wrapper, {
                 scale: 2,
@@ -736,9 +742,11 @@
                 allowTaint: true,
                 scrollX: 0,
                 scrollY: 0,
+                x: 0,
+                y: 0,
                 width: fullW,
                 height: fullH,
-                windowWidth: fullW,
+                windowWidth: captureWidth + 32,
                 windowHeight: fullH
             });
             document.body.removeChild(wrapper);
