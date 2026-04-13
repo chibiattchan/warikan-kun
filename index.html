@@ -696,18 +696,51 @@
             const el = document.getElementById(elementId);
             const source = tableOnly ? el.querySelector('table') : el;
             const clone = source.cloneNode(true);
-            // truncate・min-w-0を解除して文字が切れないようにする
-            clone.querySelectorAll('[class]').forEach(node => {
-                node.classList.remove('truncate', 'min-w-0');
+
+            // ドラッグハンドル列は画像に不要なので除外
+            clone.querySelectorAll('.drag-handle').forEach(td => td.style.display = 'none');
+
+            // truncate・min-w-0・スクロール制限をすべて解除
+            clone.querySelectorAll('*').forEach(node => {
+                if (node.classList) {
+                    node.classList.remove('truncate', 'min-w-0', 'overflow-x-auto', 'overflow-y-auto', 'no-scrollbar');
+                }
                 node.style.overflow = 'visible';
                 node.style.whiteSpace = 'normal';
                 node.style.textOverflow = 'clip';
+                node.style.maxHeight = 'none';
+                node.style.maxWidth = 'none';
             });
+
+            // position:absolute で DOM に追加（fixed はモバイルのビューポートに拘束されて切れる）
             const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'position:fixed;top:-99999px;left:-99999px;background:#fff;padding:16px;border-radius:24px;width:360px';
+            wrapper.style.cssText = [
+                'position:absolute', 'top:0', 'left:-99999px',
+                'visibility:hidden', 'z-index:-1',
+                'background:#ffffff', 'padding:16px', 'border-radius:24px',
+                tableOnly ? 'width:auto' : 'width:360px'
+            ].join(';');
             wrapper.appendChild(clone);
             document.body.appendChild(wrapper);
-            const canvas = await html2canvas(wrapper, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+
+            // DOM 追加後に実際の全体サイズを取得して html2canvas に渡す
+            const fullW = wrapper.scrollWidth;
+            const fullH = wrapper.scrollHeight;
+            wrapper.style.width  = fullW + 'px';
+            wrapper.style.height = fullH + 'px';
+
+            const canvas = await html2canvas(wrapper, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                useCORS: true,
+                allowTaint: true,
+                scrollX: 0,
+                scrollY: 0,
+                width: fullW,
+                height: fullH,
+                windowWidth: fullW,
+                windowHeight: fullH
+            });
             document.body.removeChild(wrapper);
             const dataUrl = canvas.toDataURL('image/png');
             document.getElementById('previewImg').src = dataUrl;
