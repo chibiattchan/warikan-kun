@@ -700,25 +700,32 @@
             // ドラッグハンドル列は画像に不要なので除外
             clone.querySelectorAll('.drag-handle').forEach(td => td.style.display = 'none');
 
-            // truncate・min-w-0・スクロール制限をすべて解除
+            // ① すべての子孫要素のスクロール・折り返し制限を解除
             clone.querySelectorAll('*').forEach(node => {
                 if (node.classList) {
                     node.classList.remove('truncate', 'min-w-0', 'overflow-x-auto', 'overflow-y-auto', 'no-scrollbar');
                 }
-                node.style.overflow = 'visible';
-                node.style.whiteSpace = 'normal';
-                node.style.textOverflow = 'clip';
-                node.style.maxHeight = 'none';
-                node.style.maxWidth = 'none';
+                node.style.setProperty('overflow',      'visible', 'important');
+                node.style.setProperty('max-height',    'none',    'important');
+                node.style.setProperty('max-width',     'none',    'important');
+                node.style.setProperty('text-overflow', 'clip',    'important');
             });
 
-            // クローン自体の幅を強制展開（テーブルは全列が入る 1200px、精算カードは 400px）
-            const captureWidth = tableOnly ? 1200 : 400;
-            clone.style.width = captureWidth + 'px';
-            clone.style.minWidth = captureWidth + 'px';
+            // ② td/th は絶対に折り返さない
+            clone.querySelectorAll('td, th').forEach(cell => {
+                cell.style.setProperty('white-space', 'nowrap', 'important');
+            });
+
+            // ③ テーブル本体のスタイルリセット
+            if (tableOnly) {
+                clone.style.setProperty('width',     '100%',  'important');
+                clone.style.setProperty('transform', 'none',  'important');
+                clone.style.setProperty('margin',    '0',     'important');
+            }
             clone.style.backgroundColor = '#ffffff';
 
-            // position:fixed + 画面外配置でモバイルビューポートの制約を回避
+            // ④ 1200px 幅のコンテナに配置（スマホビューポートを無視）
+            const captureWidth = tableOnly ? 1200 : 400;
             const wrapper = document.createElement('div');
             wrapper.style.cssText = [
                 'position:fixed', 'top:0', 'left:-99999px',
@@ -729,7 +736,9 @@
             wrapper.appendChild(clone);
             document.body.appendChild(wrapper);
 
-            // ブラウザがクローンを描画するまで待機（真っ白防止）
+            // ⑤ ブラウザに再計算・描画を促してからキャプチャ
+            void wrapper.getBoundingClientRect();
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
             await new Promise(r => setTimeout(r, 150));
 
             const fullW = wrapper.scrollWidth;
@@ -746,7 +755,7 @@
                 y: 0,
                 width: fullW,
                 height: fullH,
-                windowWidth: captureWidth + 32,
+                windowWidth: 1200,
                 windowHeight: fullH
             });
             document.body.removeChild(wrapper);
