@@ -71,6 +71,15 @@
         #floatingAddBtn {
             bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
         }
+        .sortable-ghost {
+            opacity: 0.3;
+            background: #e0e7ff !important;
+        }
+        .sortable-chosen {
+            box-shadow: 0 8px 24px rgba(99,102,241,0.25);
+            opacity: 0.9;
+            background: #f0f4ff !important;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 pb-32">
@@ -288,7 +297,11 @@
                     Sortable.create(tableBody, {
                         handle: '.drag-handle',
                         animation: 150,
-                        ghostClass: 'bg-indigo-50',
+                        delay: 150,
+                        delayOnTouchOnly: true,
+                        forceFallback: true,
+                        ghostClass: 'sortable-ghost',
+                        chosenClass: 'sortable-chosen',
                         onEnd: function() {
                             const newOrder = Array.from(tableBody.querySelectorAll('tr')).map(row => row.dataset.id);
                             state.expenses = newOrder.map(id => state.expenses.find(e => e.id === id));
